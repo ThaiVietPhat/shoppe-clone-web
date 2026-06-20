@@ -149,17 +149,17 @@ export function Header() {
                     <Avatar className="h-7 w-7">
                       <AvatarImage src={user.avatarUrl ?? undefined} />
                       <AvatarFallback className="bg-primary/20 text-primary text-xs font-semibold">
-                        {user.fullName.charAt(0).toUpperCase()}
+                        {(user.fullName ?? user.email).charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <span className="hidden md:block text-sm font-medium max-w-24 truncate">
-                      {user.fullName}
+                      {user.fullName ?? user.email}
                     </span>
                     <ChevronDown className="h-3.5 w-3.5 opacity-60" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-52 bg-card border-white/10">
                     <div className="px-2 py-1.5">
-                      <p className="text-sm font-medium truncate">{user.fullName}</p>
+                      <p className="text-sm font-medium truncate">{user.fullName ?? user.email}</p>
                       <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                     </div>
                     <DropdownMenuSeparator className="bg-white/8" />

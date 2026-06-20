@@ -60,7 +60,7 @@ export default function LoginPage() {
     }
   }
 
-  function handleOAuth(provider: 'google' | 'facebook') {
+  function handleOAuth(provider: 'google') {
     const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080';
     window.location.href = `${base}/oauth2/authorization/${provider}`;
   }
@@ -89,15 +89,6 @@ export default function LoginPage() {
           >
             <GoogleIcon />
             Tiếp tục với Google
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full border-white/10 bg-white/3 hover:bg-white/6 gap-3"
-            onClick={() => handleOAuth('facebook')}
-          >
-            <FacebookIcon />
-            Tiếp tục với Facebook
           </Button>
         </div>
 
