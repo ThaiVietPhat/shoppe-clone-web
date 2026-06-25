@@ -25,12 +25,10 @@ OpenAPI groups:
 
 ---
 
-## Demo Accounts (sau khi chạy seed)
+## Demo Accounts
 
-| Role | Email | Password |
-|---|---|---|
-| Buyer | `demo-buyer@shopee.local` | `password` |
-| Seller | `demo-seller@shopee.local` | `password` |
+> Backend không còn seed data sẵn (đã bỏ để sản phẩm có ảnh thật qua upload R2 thay vì SQL seed).
+> Tự đăng ký account buyer/seller mới qua `/api/auth/register`, hoặc tạo qua Swagger UI.
 
 ---
 
