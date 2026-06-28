@@ -109,7 +109,7 @@ Response:
 {
   "code": 200,
   "data": {
-    "content": [
+    "items": [
       {
         "productId": "uuid",
         "name": "Laptop Gaming ASUS TUF",
@@ -273,7 +273,7 @@ Response:
 {
   "code": 200,
   "data": {
-    "content": [
+    "items": [
       {
         "type": "STOCK_UPDATE",
         "quantity": 100,

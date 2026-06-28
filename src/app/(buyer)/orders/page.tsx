@@ -6,7 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Package, ShoppingBag } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Page, OrderSummary } from '@/types/api';
+import { OrderSummary } from '@/types/api';
+import { pageFrom, PagedResponse } from '@/lib/page';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination } from '@/components/shared/Pagination';
@@ -23,10 +24,10 @@ function OrdersContent() {
   const { data, isLoading } = useQuery({
     queryKey: ['buyer-orders', status, page],
     queryFn: async () => {
-      const { data } = await api.get<{ data: Page<OrderSummary> }>(
+      const { data } = await api.get<{ data: PagedResponse<OrderSummary> }>(
         `/api/buyer/orders?page=${page}&size=20&status=${status}`
       );
-      return data.data;
+      return pageFrom(data.data);
     },
   });
 

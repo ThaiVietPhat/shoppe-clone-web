@@ -87,7 +87,7 @@ Các list endpoint trả:
 {
   "code": 200,
   "data": {
-    "content": [ ... ],
+    "items": [ ... ],
     "page": 0,
     "size": 20,
     "totalElements": 150,
@@ -102,10 +102,10 @@ Query params chuẩn:
 ?page=0&size=20&sort=createdAt,desc
 ```
 
-TypeScript type:
+TypeScript type (khớp `PagedResponse` của backend — dùng field **`items`**, KHÔNG phải `content`):
 ```ts
-interface Page<T> {
-  content: T[];
+interface PagedResponse<T> {
+  items: T[];          // ⚠️ backend trả `items`, không phải `content`
   page: number;
   size: number;
   totalElements: number;
@@ -113,6 +113,8 @@ interface Page<T> {
   last: boolean;
 }
 ```
+
+> FE chuẩn hoá `items → content` qua helper `pageFrom()` (`src/lib/page.ts`) để code render dùng `.content` cho tiện. Khi đọc trực tiếp response thô thì luôn là `items`.
 
 ---
 

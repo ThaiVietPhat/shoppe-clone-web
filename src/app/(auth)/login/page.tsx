@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -24,8 +24,9 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [globalError, setGlobalError] = useState('');
@@ -42,6 +43,13 @@ export default function LoginPage() {
       const { data } = await api.post<{ data: LoginResponse }>('/api/auth/login', values);
       login(data.data.accessToken, data.data.user);
       toast.success(`Chào mừng trở lại, ${data.data.user.fullName}!`);
+
+      // Nếu khách bị chuyển tới login từ một trang cần đăng nhập, quay lại đúng trang đó.
+      const redirect = searchParams.get('redirect');
+      if (redirect && redirect.startsWith('/')) {
+        router.push(redirect);
+        return;
+      }
 
       const role = data.data.user.role;
       if (role === 'SELLER') router.push('/seller/dashboard');
@@ -186,6 +194,14 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="w-full max-w-md text-sm text-muted-foreground">Đang tải…</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }
 

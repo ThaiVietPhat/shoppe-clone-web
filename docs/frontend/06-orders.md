@@ -24,7 +24,7 @@ Response:
 {
   "code": 200,
   "data": {
-    "content": [
+    "items": [
       {
         "orderId": "uuid",
         "checkoutSessionId": "uuid",

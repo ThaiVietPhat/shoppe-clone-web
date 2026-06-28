@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { ProductCard } from '@/components/product/ProductCard';
 import { ProductCardSkeleton } from '@/components/product/ProductCardSkeleton';
-import { ProductCardResponse, Page, CategoryNode } from '@/types/api';
+import { ProductCardResponse, CategoryNode } from '@/types/api';
+import { pageFrom, PagedResponse } from '@/lib/page';
 import Link from 'next/link';
 import { ChevronRight, Zap, TrendingUp, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -13,10 +14,10 @@ export default function HomePage() {
   const { data: productsData, isLoading: productsLoading } = useQuery({
     queryKey: ['homepage-products'],
     queryFn: async () => {
-      const { data } = await api.get<{ data: Page<ProductCardResponse> }>(
+      const { data } = await api.get<{ data: PagedResponse<ProductCardResponse> }>(
         '/api/products/homepage?page=0&size=20'
       );
-      return data.data;
+      return pageFrom(data.data);
     },
   });
 
@@ -32,8 +33,8 @@ export default function HomePage() {
   const { data: recommendData } = useQuery({
     queryKey: ['home-recommendations'],
     queryFn: async () => {
-      const { data } = await api.get('/api/recommendations/home?page=0&size=8');
-      return data.data;
+      const { data } = await api.get<{ data: PagedResponse<ProductCardResponse> }>('/api/recommendations/home?page=0&size=8');
+      return pageFrom(data.data);
     },
   });
 
@@ -80,8 +81,8 @@ export default function HomePage() {
           <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
             {categories.slice(0, 16).map((cat) => (
               <Link
-                key={cat.categoryId}
-                href={`/categories/${cat.categoryId}`}
+                key={cat.id}
+                href={`/categories/${cat.id}`}
                 className="flex flex-col items-center gap-2 p-3 rounded-xl bg-card border border-white/6 hover:border-primary/30 hover:bg-white/3 transition-all group"
               >
                 <div className="h-10 w-10 rounded-lg bg-white/5 group-hover:bg-primary/10 transition-colors flex items-center justify-center">

@@ -54,7 +54,7 @@ Response:
 {
   "code": 200,
   "data": {
-    "content": [
+    "items": [
       {
         "reviewId": "uuid",
         "rating": 5,
@@ -120,7 +120,7 @@ Response:
 {
   "code": 200,
   "data": {
-    "content": [
+    "items": [
       {
         "notificationId": "uuid",
         "type": "ORDER_CONFIRMED",

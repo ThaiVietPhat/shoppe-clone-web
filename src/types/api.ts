@@ -101,11 +101,10 @@ export interface ProductDetail {
 }
 
 export interface CategoryNode {
-  categoryId: string;
-  name: string;
-  slug: string;
+  id: string;
   parentId: string | null;
-  children: CategoryNode[];
+  name: string;
+  path: string;
 }
 
 export interface ShopDetail {
@@ -359,6 +358,19 @@ export interface ChatMessage {
   content: string;
   sentAt: string;
   read: boolean;
+}
+
+// AI recommendation chat
+export interface RecommendedProductResponse {
+  product: ProductCardResponse;
+  reasonCodes: string[];
+}
+
+export interface ChatRecommendResponse {
+  items: RecommendedProductResponse[];
+  degraded: boolean;
+  degradedReason: string | null;
+  generatedText: string | null;
 }
 
 // Seller

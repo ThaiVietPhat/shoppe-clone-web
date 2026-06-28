@@ -1,4 +1,41 @@
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/stores/auth.store';
+
+// Các đường dẫn yêu cầu đăng nhập — khách bấm vào sẽ được đưa sang trang login.
+const AUTH_REQUIRED_PREFIXES = ['/orders', '/cart', '/seller'];
+
+function isAuthRequired(href: string) {
+  return AUTH_REQUIRED_PREFIXES.some(
+    (prefix) => href === prefix || href.startsWith(`${prefix}/`)
+  );
+}
+
+function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
+  const router = useRouter();
+  const { user, isHydrated } = useAuthStore();
+
+  function handleClick(e: React.MouseEvent) {
+    // Chỉ chặn khi đã hydrate xong và xác định là khách — tránh redirect nhầm
+    // người dùng đã đăng nhập ở lần render đầu.
+    if (isHydrated && !user && isAuthRequired(href)) {
+      e.preventDefault();
+      router.push(`/login?redirect=${encodeURIComponent(href)}`);
+    }
+  }
+
+  return (
+    <Link
+      href={href}
+      onClick={handleClick}
+      className="hover:text-foreground transition-colors"
+    >
+      {children}
+    </Link>
+  );
+}
 
 export function Footer() {
   return (
@@ -20,18 +57,18 @@ export function Footer() {
           <div>
             <h4 className="text-sm font-semibold text-foreground mb-3">Người mua</h4>
             <ul className="space-y-2 text-xs text-muted-foreground">
-              <li><Link href="/" className="hover:text-foreground transition-colors">Trang chủ</Link></li>
-              <li><Link href="/orders" className="hover:text-foreground transition-colors">Đơn hàng</Link></li>
-              <li><Link href="/cart" className="hover:text-foreground transition-colors">Giỏ hàng</Link></li>
+              <li><FooterLink href="/">Trang chủ</FooterLink></li>
+              <li><FooterLink href="/orders">Đơn hàng</FooterLink></li>
+              <li><FooterLink href="/cart">Giỏ hàng</FooterLink></li>
             </ul>
           </div>
 
           <div>
             <h4 className="text-sm font-semibold text-foreground mb-3">Người bán</h4>
             <ul className="space-y-2 text-xs text-muted-foreground">
-              <li><Link href="/seller/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link></li>
-              <li><Link href="/seller/products" className="hover:text-foreground transition-colors">Quản lý sản phẩm</Link></li>
-              <li><Link href="/seller/orders" className="hover:text-foreground transition-colors">Quản lý đơn hàng</Link></li>
+              <li><FooterLink href="/seller/dashboard">Dashboard</FooterLink></li>
+              <li><FooterLink href="/seller/products">Quản lý sản phẩm</FooterLink></li>
+              <li><FooterLink href="/seller/orders">Quản lý đơn hàng</FooterLink></li>
             </ul>
           </div>
 

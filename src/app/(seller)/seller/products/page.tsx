@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Package, Plus, Pencil, Eye, EyeOff } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Page, SellerProduct } from '@/types/api';
+import { SellerProduct } from '@/types/api';
+import { pageFrom, PagedResponse } from '@/lib/page';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -40,10 +41,10 @@ export default function SellerProductsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['seller-products', status, page],
     queryFn: async () => {
-      const { data } = await api.get<{ data: Page<SellerProduct> }>(
+      const { data } = await api.get<{ data: PagedResponse<SellerProduct> }>(
         `/api/seller/products?page=${page}&size=20&status=${status}`
       );
-      return data.data;
+      return pageFrom(data.data);
     },
   });
 

@@ -4,7 +4,8 @@ import { Suspense, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ClipboardList, Truck, PackageCheck, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Page, SellerOrderSummary } from '@/types/api';
+import { SellerOrderSummary } from '@/types/api';
+import { pageFrom, PagedResponse } from '@/lib/page';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -28,10 +29,10 @@ function SellerOrdersContent() {
   const { data, isLoading } = useQuery({
     queryKey: ['seller-orders', status, page],
     queryFn: async () => {
-      const { data } = await api.get<{ data: Page<SellerOrderSummary> }>(
+      const { data } = await api.get<{ data: PagedResponse<SellerOrderSummary> }>(
         `/api/seller/orders?page=${page}&size=20&status=${status}`
       );
-      return data.data;
+      return pageFrom(data.data);
     },
   });
 

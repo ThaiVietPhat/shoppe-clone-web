@@ -4,7 +4,8 @@ import { use, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { PackageSearch } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Page, ProductCardResponse } from '@/types/api';
+import { ProductCardResponse } from '@/types/api';
+import { pageFrom, PagedResponse } from '@/lib/page';
 import { ProductCard } from '@/components/product/ProductCard';
 import { ProductCardSkeleton } from '@/components/product/ProductCardSkeleton';
 import { Pagination } from '@/components/shared/Pagination';
@@ -17,10 +18,10 @@ export default function CategoryPage({ params }: { params: Promise<{ categoryId:
   const { data, isLoading } = useQuery({
     queryKey: ['category-products', categoryId, page],
     queryFn: async () => {
-      const { data } = await api.get<{ data: Page<ProductCardResponse> }>(
+      const { data } = await api.get<{ data: PagedResponse<ProductCardResponse> }>(
         `/api/categories/${categoryId}/products?page=${page}&size=20`
       );
-      return data.data;
+      return pageFrom(data.data);
     },
   });
 

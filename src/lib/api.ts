@@ -16,6 +16,8 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
   xsrfCookieName: 'XSRF-TOKEN',
   xsrfHeaderName: 'X-XSRF-TOKEN',
+  // axios >= 1.6 chỉ gắn header X-XSRF-TOKEN cho request khác origin khi bật cờ này
+  withXSRFToken: true,
 });
 
 api.interceptors.request.use((config) => {

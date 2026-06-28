@@ -52,7 +52,7 @@ Response:
 {
   "code": 200,
   "data": {
-    "content": [
+    "items": [
       {
         "roomId": "uuid",
         "shop": {
@@ -84,7 +84,7 @@ Response (tin nhắn từ mới → cũ, page 0 = tin nhắn mới nhất):
 {
   "code": 200,
   "data": {
-    "content": [
+    "items": [
       {
         "messageId": "uuid",
         "roomId": "uuid",

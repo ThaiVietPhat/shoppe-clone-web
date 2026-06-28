@@ -23,11 +23,10 @@ interface VariantInput {
 interface AttrInput { name: string; value: string }
 type Media = { mediaId: string; url: string };
 
-function flattenCategories(nodes: CategoryNode[], depth = 0): { id: string; label: string }[] {
-  return nodes.flatMap((n) => [
-    { id: n.categoryId, label: `${'— '.repeat(depth)}${n.name}` },
-    ...flattenCategories(n.children ?? [], depth + 1),
-  ]);
+function flattenCategories(nodes: CategoryNode[]): { id: string; label: string }[] {
+  return [...nodes]
+    .sort((a, b) => (a.path ?? a.name).localeCompare(b.path ?? b.name))
+    .map((n) => ({ id: n.id, label: n.path || n.name }));
 }
 
 export default function NewProductPage() {

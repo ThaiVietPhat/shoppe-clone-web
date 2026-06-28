@@ -5,7 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Store, Send, MessagesSquare, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Page, ChatRoom, ChatMessage } from '@/types/api';
+import { ChatRoom, ChatMessage } from '@/types/api';
+import { pageFrom, PagedResponse } from '@/lib/page';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,8 +23,8 @@ function ChatContent() {
   const { data: rooms, isLoading: roomsLoading } = useQuery({
     queryKey: ['chat-rooms'],
     queryFn: async () => {
-      const { data } = await api.get<{ data: Page<ChatRoom> }>('/api/chat/rooms?page=0&size=20');
-      return data.data.content;
+      const { data } = await api.get<{ data: PagedResponse<ChatRoom> }>('/api/chat/rooms?page=0&size=20');
+      return pageFrom(data.data).content;
     },
   });
 
@@ -83,8 +84,8 @@ function ChatRoomView({ roomId, shopName }: { roomId: string; shopName?: string 
   const { data: history, isLoading } = useQuery({
     queryKey: ['chat-messages', roomId],
     queryFn: async () => {
-      const { data } = await api.get<{ data: Page<ChatMessage> }>(`/api/chat/rooms/${roomId}/messages?page=0&size=50`);
-      return [...data.data.content].reverse();
+      const { data } = await api.get<{ data: PagedResponse<ChatMessage> }>(`/api/chat/rooms/${roomId}/messages?page=0&size=50`);
+      return [...pageFrom(data.data).content].reverse();
     },
   });
 

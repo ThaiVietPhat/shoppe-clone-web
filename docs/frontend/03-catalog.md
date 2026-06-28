@@ -50,7 +50,7 @@ Response:
 {
   "code": 200,
   "data": {
-    "content": [ /* ProductCardResponse[] */ ],
+    "items": [ /* ProductCardResponse[] */ ],
     "page": 0,
     "size": 20,
     "totalElements": 120,
@@ -68,29 +68,32 @@ Response:
 GET /api/categories
 ```
 
-Trả toàn bộ category tree (cached 30 phút trên server):
+Trả về **danh sách phẳng** (KHÔNG phải cây lồng nhau), cached 30 phút trên server. Mỗi item có `id`, `parentId`, `path` (materialized path) — tự dựng cây từ `parentId` nếu cần, hoặc hiển thị trực tiếp theo `path`:
 ```json
 {
   "code": 200,
   "data": [
     {
-      "categoryId": "uuid",
-      "name": "Điện tử",
-      "slug": "dien-tu",
+      "id": "uuid",
       "parentId": null,
-      "children": [
-        {
-          "categoryId": "uuid",
-          "name": "Laptop",
-          "slug": "laptop",
-          "parentId": "parent-uuid",
-          "children": []
-        }
-      ]
+      "name": "Điện tử",
+      "path": "Điện tử",
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "uuid",
+      "parentId": "parent-uuid",
+      "name": "Laptop",
+      "path": "Điện tử > Laptop",
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
     }
   ]
 }
 ```
+
+> ⚠️ Backend dùng field `id`/`parentId`/`path` — KHÔNG có `categoryId`, `slug`, hay `children`. Danh mục là master data do admin quản lý; hiện chưa có API tạo/sửa danh mục (seed qua migration `V22__seed_categories.sql`).
 
 Browse sản phẩm theo category:
 ```http
@@ -196,7 +199,7 @@ Response:
 {
   "code": 200,
   "data": {
-    "content": [ /* ProductCardResponse[] */ ],
+    "items": [ /* ProductCardResponse[] */ ],
     "page": 0,
     "size": 20,
     "totalElements": 45,
@@ -244,7 +247,7 @@ Response:
 {
   "code": 200,
   "data": {
-    "content": [
+    "items": [
       {
         /* ProductCardResponse */
         "reasonCode": "SIMILAR_TO_CART",

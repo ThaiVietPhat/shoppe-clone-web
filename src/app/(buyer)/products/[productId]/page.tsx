@@ -15,7 +15,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
-import { ProductDetail, ProductVariant, Review, Page } from '@/types/api';
+import { ProductDetail, ProductVariant, Review, ReviewSummary } from '@/types/api';
+import { pageFrom, PagedResponse } from '@/lib/page';
 import { cn, formatPrice, formatRelative } from '@/lib/utils';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -45,10 +46,10 @@ export default function ProductDetailPage({
   const { data: reviewsData } = useQuery({
     queryKey: ['product-reviews', productId],
     queryFn: async () => {
-      const { data } = await api.get<{ data: Page<Review> & { summary: { averageRating: number; totalReviews: number; distribution: Record<string, number> } } }>(
+      const { data } = await api.get<{ data: PagedResponse<Review> & { summary: ReviewSummary } }>(
         `/api/products/${productId}/reviews?page=0&size=10`
       );
-      return data.data;
+      return { ...pageFrom(data.data), summary: data.data.summary };
     },
     enabled: !!product,
   });

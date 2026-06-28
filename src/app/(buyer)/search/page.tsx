@@ -5,7 +5,11 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Search as SearchIcon, SlidersHorizontal, AlertTriangle, Sparkles } from 'lucide-react';
 import { api } from '@/lib/api';
-import { SearchResult } from '@/types/api';
+import { SearchResult, ProductCardResponse, SearchFacets } from '@/types/api';
+import { pageFrom, PagedResponse } from '@/lib/page';
+
+type RawSearch = PagedResponse<ProductCardResponse> & { degraded?: boolean; facets?: SearchFacets };
+const toSearchResult = (d: RawSearch): SearchResult => ({ ...pageFrom(d), degraded: d.degraded ?? false, facets: d.facets });
 import { ProductCard } from '@/components/product/ProductCard';
 import { ProductCardSkeleton } from '@/components/product/ProductCardSkeleton';
 import { Pagination } from '@/components/shared/Pagination';
@@ -52,18 +56,18 @@ function SearchContent() {
     queryKey: ['search', q, categoryId, sort, brand, minPrice, maxPrice, semantic, page],
     queryFn: async () => {
       if (semantic) {
-        const { data } = await api.get<{ data: SearchResult }>(
+        const { data } = await api.get<{ data: RawSearch }>(
           `/api/search/products/semantic?q=${encodeURIComponent(q)}&page=${page}&size=20`
         );
-        return data.data;
+        return toSearchResult(data.data);
       }
       const sp = new URLSearchParams({ q, sort, page: String(page), size: '20' });
       if (categoryId) sp.set('categoryId', categoryId);
       if (brand) sp.set('brand', brand);
       if (minPrice) sp.set('minPrice', minPrice);
       if (maxPrice) sp.set('maxPrice', maxPrice);
-      const { data } = await api.get<{ data: SearchResult }>(`/api/search/products?${sp.toString()}`);
-      return data.data;
+      const { data } = await api.get<{ data: RawSearch }>(`/api/search/products?${sp.toString()}`);
+      return toSearchResult(data.data);
     },
   });
 

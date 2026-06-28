@@ -7,7 +7,8 @@ import {
   Bell, Package, Truck, PackageCheck, CheckCircle2, XCircle, Star, CheckCheck,
 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Page, Notification } from '@/types/api';
+import { Notification } from '@/types/api';
+import { pageFrom, PagedResponse } from '@/lib/page';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -32,10 +33,10 @@ export default function NotificationsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['notifications', unreadOnly, page],
     queryFn: async () => {
-      const { data } = await api.get<{ data: Page<Notification> }>(
+      const { data } = await api.get<{ data: PagedResponse<Notification> }>(
         `/api/notifications?page=${page}&size=20&unreadOnly=${unreadOnly}`
       );
-      return data.data;
+      return pageFrom(data.data);
     },
   });
 

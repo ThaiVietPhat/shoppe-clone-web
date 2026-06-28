@@ -6,7 +6,8 @@ import Image from 'next/image';
 import { Store, Star, Users, Package, MessageCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { Page, ProductCardResponse, ShopDetail } from '@/types/api';
+import { ProductCardResponse, ShopDetail } from '@/types/api';
+import { pageFrom, PagedResponse } from '@/lib/page';
 import { ProductCard } from '@/components/product/ProductCard';
 import { ProductCardSkeleton } from '@/components/product/ProductCardSkeleton';
 import { Pagination } from '@/components/shared/Pagination';
@@ -33,10 +34,10 @@ export default function ShopPage({ params }: { params: Promise<{ shopId: string 
   const { data: products, isLoading: productsLoading } = useQuery({
     queryKey: ['shop-products', shopId, page],
     queryFn: async () => {
-      const { data } = await api.get<{ data: Page<ProductCardResponse> }>(
+      const { data } = await api.get<{ data: PagedResponse<ProductCardResponse> }>(
         `/api/shops/${shopId}/products?page=${page}&size=20`
       );
-      return data.data;
+      return pageFrom(data.data);
     },
   });
 
