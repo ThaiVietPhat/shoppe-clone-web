@@ -6,7 +6,8 @@ import { Loader2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { api, setAccessToken } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
-import { ApiResponse, User } from '@/types/api';
+import { ApiResponse, CurrentUserResponse } from '@/types/api';
+import { toStoreUser } from '@/lib/user';
 
 function RedirectContent() {
   const router = useRouter();
@@ -31,11 +32,11 @@ function RedirectContent() {
       .then(({ data }) => {
         const token = data.data.accessToken;
         setAccessToken(token);
-        return api.get<ApiResponse<User>>('/api/users/me').then(({ data: meData }) => {
-          login(token, meData.data);
-          const role = meData.data.role;
-          if (role === 'SELLER') router.push('/seller/dashboard');
-          else if (role === 'ADMIN') router.push('/admin');
+        return api.get<ApiResponse<CurrentUserResponse>>('/api/users/me').then(({ data: meData }) => {
+          const user = toStoreUser(meData.data);
+          login(token, user);
+          if (user.role === 'SELLER') router.push('/seller/dashboard');
+          else if (user.role === 'ADMIN') router.push('/admin');
           else router.push('/');
         });
       })

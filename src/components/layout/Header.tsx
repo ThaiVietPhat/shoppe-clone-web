@@ -184,6 +184,15 @@ export function Header() {
                         </DropdownMenuItem>
                       </>
                     )}
+                    {user.role === 'BUYER' && (
+                      <>
+                        <DropdownMenuSeparator className="bg-white/8" />
+                        <DropdownMenuItem onClick={() => router.push('/become-seller')}>
+                          <Store className="h-4 w-4" />
+                          Đăng ký bán hàng
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     <DropdownMenuSeparator className="bg-white/8" />
                     <DropdownMenuItem
                       variant="destructive"

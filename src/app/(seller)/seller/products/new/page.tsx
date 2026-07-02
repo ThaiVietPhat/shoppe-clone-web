@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Plus, Trash2, Loader2, Package } from 'lucide-react';
 import { api } from '@/lib/api';
-import { CategoryNode } from '@/types/api';
+import { CategoryNode, ShopDetail } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 interface OptionInput { name: string; value: string }
 interface VariantInput {
   sku: string;
+  name: string;
   price: string;
   initialStock: string;
   options: OptionInput[];
@@ -39,7 +40,7 @@ export default function NewProductPage() {
   const [gallery, setGallery] = useState<(Media | null)[]>([null, null, null]);
   const [attributes, setAttributes] = useState<AttrInput[]>([]);
   const [variants, setVariants] = useState<VariantInput[]>([
-    { sku: '', price: '', initialStock: '', options: [{ name: '', value: '' }] },
+    { sku: '', name: '', price: '', initialStock: '', options: [{ name: '', value: '' }] },
   ]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -52,6 +53,15 @@ export default function NewProductPage() {
     staleTime: 30 * 60 * 1000,
   });
 
+  const { data: shop } = useQuery({
+    queryKey: ['my-shop'],
+    queryFn: async () => {
+      const { data } = await api.get<{ data: ShopDetail }>('/api/shops/me');
+      return data.data;
+    },
+  });
+  const shopId = shop?.id ?? '';
+
   const flatCategories = categories ? flattenCategories(categories) : [];
 
   function updateVariant(i: number, patch: Partial<VariantInput>) {
@@ -59,30 +69,37 @@ export default function NewProductPage() {
   }
 
   async function handleSubmit(publish: boolean) {
+    if (!shopId) return toast.error('Không tìm thấy shop của bạn');
     if (!name.trim()) return toast.error('Nhập tên sản phẩm');
     if (!categoryId) return toast.error('Chọn danh mục');
     if (!cover) return toast.error('Tải ảnh bìa');
-    if (variants.some((v) => !v.sku.trim() || !v.price)) return toast.error('Nhập đầy đủ SKU và giá cho mỗi phiên bản');
+    if (variants.some((v) => !v.sku.trim() || !v.name.trim() || !v.price)) {
+      return toast.error('Nhập đầy đủ tên, SKU và giá cho mỗi phiên bản');
+    }
 
     setSubmitting(true);
     try {
       const mediaIds = [cover.mediaId, ...gallery.filter((g): g is Media => !!g).map((g) => g.mediaId)];
 
-      const { data: created } = await api.post<{ data: { productId: string } }>('/api/products', {
-        name, description, brand: brand || null, categoryId,
-        attributes: attributes.filter((a) => a.name && a.value),
-        mediaIds, coverMediaId: cover.mediaId,
+      const { data: created } = await api.post<{ data: { id: string } }>('/api/products', {
+        shopId, name, description, brand: brand || null, categoryId,
+        attributes: Object.fromEntries(attributes.filter((a) => a.name && a.value).map((a) => [a.name, a.value])),
+        mediaIds,
       });
-      const productId = created.data.productId;
+      const productId = created.data.id;
 
       for (const v of variants) {
-        const { data: vRes } = await api.post<{ data: { variantId: string } }>(`/api/products/${productId}/variants`, {
+        const optionLabels = Object.fromEntries(
+          v.options.filter((o) => o.name && o.value).map((o) => [o.name, o.value])
+        );
+        const { data: vRes } = await api.post<{ data: { id: string } }>(`/api/products/${productId}/variants`, {
           sku: v.sku,
+          name: v.name,
           price: Number(v.price),
-          options: v.options.filter((o) => o.name && o.value),
+          optionLabels,
         });
         await api.post('/api/inventories', {
-          variantId: vRes.data.variantId,
+          variantId: vRes.data.id,
           initialStock: Number(v.initialStock || 0),
         });
       }
@@ -136,12 +153,12 @@ export default function NewProductPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
               <p className="text-xs text-muted-foreground mb-1.5">Ảnh bìa</p>
-              <ImageUpload purpose="PRODUCT_IMAGE" value={cover} onChange={setCover} />
+              <ImageUpload purpose="PRODUCT_IMAGE" ownerId={shopId} ownerType="SHOP" value={cover} onChange={setCover} />
             </div>
             {gallery.map((g, i) => (
               <div key={i}>
                 <p className="text-xs text-muted-foreground mb-1.5">Ảnh {i + 1}</p>
-                <ImageUpload purpose="PRODUCT_IMAGE" value={g}
+                <ImageUpload purpose="PRODUCT_IMAGE" ownerId={shopId} ownerType="SHOP" value={g}
                   onChange={(m) => setGallery((gs) => gs.map((x, idx) => (idx === i ? m : x)))} />
               </div>
             ))}
@@ -177,7 +194,7 @@ export default function NewProductPage() {
         {/* Variants */}
         <Section title="Phiên bản & tồn kho" action={
           <Button size="sm" variant="ghost" className="text-primary gap-1 text-xs"
-            onClick={() => setVariants((v) => [...v, { sku: '', price: '', initialStock: '', options: [{ name: '', value: '' }] }])}>
+            onClick={() => setVariants((v) => [...v, { sku: '', name: '', price: '', initialStock: '', options: [{ name: '', value: '' }] }])}>
             <Plus className="h-3.5 w-3.5" /> Thêm phiên bản
           </Button>
         }>
@@ -193,6 +210,9 @@ export default function NewProductPage() {
                     </Button>
                   )}
                 </div>
+                <Field label="Tên phiên bản">
+                  <Input value={v.name} placeholder="vd: Đỏ / L" className="bg-white/5 border-white/10" onChange={(e) => updateVariant(i, { name: e.target.value })} />
+                </Field>
                 <div className="grid grid-cols-3 gap-2">
                   <Field label="SKU"><Input value={v.sku} className="bg-white/5 border-white/10" onChange={(e) => updateVariant(i, { sku: e.target.value })} /></Field>
                   <Field label="Giá (VND)"><Input value={v.price} inputMode="numeric" className="bg-white/5 border-white/10" onChange={(e) => updateVariant(i, { price: e.target.value })} /></Field>

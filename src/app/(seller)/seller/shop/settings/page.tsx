@@ -20,7 +20,6 @@ export default function ShopSettingsPage() {
   const [shopName, setShopName] = useState('');
   const [description, setDescription] = useState('');
   const [logo, setLogo] = useState<Media | null>(null);
-  const [banner, setBanner] = useState<Media | null>(null);
 
   const { data: shop, isLoading } = useQuery({
     queryKey: ['my-shop'],
@@ -29,23 +28,20 @@ export default function ShopSettingsPage() {
       return data.data;
     },
   });
+  const shopId = shop?.id ?? '';
 
   useEffect(() => {
     if (shop) {
-      setShopName(shop.shopName);
+      setShopName(shop.name);
       setDescription(shop.description ?? '');
-      if (shop.logoUrl) setLogo({ mediaId: '', url: shop.logoUrl });
-      if (shop.bannerUrl) setBanner({ mediaId: '', url: shop.bannerUrl });
+      if (shop.logo) setLogo({ mediaId: '', url: shop.logo.publicUrl });
     }
   }, [shop]);
 
+  // Logo is attached by upload alone (resolved as the shop's latest ready SHOP_LOGO media) —
+  // there's no logoMediaId field on UpdateShopRequest to save here.
   const save = useMutation({
-    mutationFn: () => api.patch('/api/shops/me', {
-      shopName,
-      description,
-      ...(logo?.mediaId ? { logoMediaId: logo.mediaId } : {}),
-      ...(banner?.mediaId ? { bannerMediaId: banner.mediaId } : {}),
-    }),
+    mutationFn: () => api.patch('/api/shops/me', { name: shopName, description }),
     onSuccess: () => { toast.success('Đã lưu thông tin shop'); qc.invalidateQueries({ queryKey: ['my-shop'] }); },
     onError: () => toast.error('Không thể lưu'),
   });
@@ -59,14 +55,10 @@ export default function ShopSettingsPage() {
       <h1 className="text-lg font-semibold text-foreground mb-5">Cài đặt shop</h1>
 
       <section className="rounded-xl border border-white/8 bg-card p-5 space-y-4">
-        <div>
-          <p className="text-xs text-muted-foreground mb-1.5">Ảnh bìa</p>
-          <ImageUpload purpose="SHOP_BANNER" aspect="banner" value={banner} onChange={setBanner} />
-        </div>
         <div className="flex items-end gap-4">
           <div className="w-28">
             <p className="text-xs text-muted-foreground mb-1.5">Logo</p>
-            <ImageUpload purpose="SHOP_LOGO" value={logo} onChange={setLogo} />
+            <ImageUpload purpose="SHOP_LOGO" ownerId={shopId} ownerType="SHOP" value={logo} onChange={setLogo} />
           </div>
         </div>
         <div className="space-y-1.5">

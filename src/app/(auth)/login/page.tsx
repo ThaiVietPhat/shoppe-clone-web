@@ -11,9 +11,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { api } from '@/lib/api';
+import { api, setAccessToken } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
-import { LoginResponse } from '@/types/api';
+import { CurrentUserResponse, LoginResponse } from '@/types/api';
+import { toStoreUser } from '@/lib/user';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -41,8 +42,11 @@ function LoginForm() {
     setGlobalError('');
     try {
       const { data } = await api.post<{ data: LoginResponse }>('/api/auth/login', values);
-      login(data.data.accessToken, data.data.user);
-      toast.success(`Chào mừng trở lại, ${data.data.user.fullName}!`);
+      setAccessToken(data.data.accessToken);
+      const { data: me } = await api.get<{ data: CurrentUserResponse }>('/api/users/me');
+      const user = toStoreUser(me.data);
+      login(data.data.accessToken, user);
+      toast.success(`Chào mừng trở lại, ${user.fullName ?? user.email}!`);
 
       // Nếu khách bị chuyển tới login từ một trang cần đăng nhập, quay lại đúng trang đó.
       const redirect = searchParams.get('redirect');
@@ -51,9 +55,8 @@ function LoginForm() {
         return;
       }
 
-      const role = data.data.user.role;
-      if (role === 'SELLER') router.push('/seller/dashboard');
-      else if (role === 'ADMIN') router.push('/admin');
+      if (user.role === 'SELLER') router.push('/seller/dashboard');
+      else if (user.role === 'ADMIN') router.push('/admin');
       else router.push('/');
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string; code?: number } } };

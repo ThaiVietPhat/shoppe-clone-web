@@ -17,7 +17,7 @@ export interface Page<T> {
 export interface User {
   id: string;
   email: string;
-  fullName: string;
+  fullName: string | null;
   role: 'BUYER' | 'SELLER' | 'ADMIN';
   emailVerified: boolean;
   avatarUrl: string | null;
@@ -25,11 +25,19 @@ export interface User {
   shopName: string | null;
 }
 
+// Backend only returns the access token; the refresh token is set as an httpOnly cookie.
 export interface LoginResponse {
   accessToken: string;
-  tokenType: string;
-  expiresIn: number;
-  user: User;
+}
+
+// Matches com.shopee.monolith.modules.user.dto.response.CurrentUserResponse (GET /api/users/me)
+export interface CurrentUserResponse {
+  id: string;
+  email: string;
+  role: 'BUYER' | 'SELLER' | 'ADMIN';
+  status: 'PENDING_VERIFICATION' | 'ACTIVE' | 'INACTIVE' | 'LOCKED';
+  avatar: { publicUrl: string } | null;
+  shop: { id: string; name: string } | null;
 }
 
 // Catalog
@@ -107,15 +115,15 @@ export interface CategoryNode {
   path: string;
 }
 
+// Matches com.shopee.monolith.modules.user.dto.response.ShopResponse.
+// No banner/productCount/followerCount support on the backend yet.
 export interface ShopDetail {
-  shopId: string;
-  shopName: string;
-  description: string;
-  logoUrl: string | null;
-  bannerUrl: string | null;
-  productCount: number;
+  id: string;
+  ownerId: string;
+  name: string;
+  description: string | null;
+  logo: { publicUrl: string } | null;
   rating: number;
-  followerCount: number;
 }
 
 // Search
@@ -216,11 +224,15 @@ export interface PlaceOrderResponse {
 }
 
 // Orders
+// Matches com.shopee.monolith.modules.order.model.OrderStatus, plus the FulfillmentStatus
+// values (READY_TO_SHIP/SHIPPED) some UI also renders as if they were an order status.
 export type OrderStatus =
   | 'PENDING_PAYMENT'
+  | 'PAID'
   | 'CONFIRMED'
   | 'READY_TO_SHIP'
   | 'SHIPPED'
+  | 'FULFILLED'
   | 'DELIVERED'
   | 'COMPLETED'
   | 'CANCELLED';
@@ -387,25 +399,35 @@ export interface SellerProduct {
   updatedAt: string;
 }
 
-export interface SellerDashboard {
-  totalProducts: number;
-  activeProducts: number;
-  pendingOrders: number;
-  shippedOrders: number;
-  completedOrders: number;
-  recentOrders: {
-    orderId: string;
-    buyerName: string;
-    grandTotal: number;
-    status: OrderStatus;
-    createdAt: string;
-  }[];
+// Matches com.shopee.monolith.modules.order.dto.response.SellerOrderSummaryResponse
+export interface SellerOrderSummary {
+  orderId: string;
+  status: OrderStatus;
+  paymentStatus: string;
+  paymentMethod: string;
+  fulfillmentStatus: string | null;
+  totalAmount: number;
+  itemCount: number;
+  shippingRecipientName: string;
+  createdAt: string;
 }
 
+// Matches com.shopee.monolith.modules.order.dto.response.SellerDashboardResponse
+export interface SellerDashboard {
+  shopId: string;
+  totalProducts: number;
+  activeProducts: number;
+  productCountsByStatus: Record<string, number>;
+  orderCountsByFulfillmentStatus: Record<string, number>;
+  orderCountsByPaymentStatus: Record<string, number>;
+  latestActionableOrders: SellerOrderSummary[];
+}
+
+// Matches com.shopee.monolith.modules.media.dto.response.MediaAssetResponse
 export interface MediaUploadResponse {
-  mediaId: string;
-  url: string;
+  id: string;
+  publicUrl: string;
   contentType: string;
-  size: number;
+  sizeBytes: number;
   purpose: string;
 }

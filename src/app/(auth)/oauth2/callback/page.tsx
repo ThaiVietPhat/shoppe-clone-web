@@ -6,7 +6,8 @@ import { Loader2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
-import { User } from '@/types/api';
+import { CurrentUserResponse } from '@/types/api';
+import { toStoreUser } from '@/lib/user';
 import { Suspense } from 'react';
 
 function CallbackContent() {
@@ -25,12 +26,12 @@ function CallbackContent() {
     // Set token tạm để gọi /api/users/me
     import('@/lib/api').then(({ setAccessToken }) => setAccessToken(token));
 
-    api.get<{ data: User }>('/api/users/me')
+    api.get<{ data: CurrentUserResponse }>('/api/users/me')
       .then(({ data }) => {
-        login(token, data.data);
-        const role = data.data.role;
-        if (role === 'SELLER') router.push('/seller/dashboard');
-        else if (role === 'ADMIN') router.push('/admin');
+        const user = toStoreUser(data.data);
+        login(token, user);
+        if (user.role === 'SELLER') router.push('/seller/dashboard');
+        else if (user.role === 'ADMIN') router.push('/admin');
         else router.push('/');
       })
       .catch(() => {

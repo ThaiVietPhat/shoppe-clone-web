@@ -23,9 +23,9 @@ export default function SellerDashboardPage() {
   const stats = [
     { label: 'Tổng sản phẩm', value: data?.totalProducts, icon: Package },
     { label: 'Đang bán', value: data?.activeProducts, icon: PackageCheck },
-    { label: 'Chờ xử lý', value: data?.pendingOrders, icon: Clock },
-    { label: 'Đang giao', value: data?.shippedOrders, icon: Truck },
-    { label: 'Hoàn thành', value: data?.completedOrders, icon: CheckCircle2 },
+    { label: 'Chờ lấy hàng', value: data?.orderCountsByFulfillmentStatus.READY_TO_SHIP, icon: Clock },
+    { label: 'Đang giao', value: data?.orderCountsByFulfillmentStatus.SHIPPED, icon: Truck },
+    { label: 'Đã giao', value: data?.orderCountsByFulfillmentStatus.DELIVERED, icon: CheckCircle2 },
   ];
 
   return (
@@ -44,25 +44,25 @@ export default function SellerDashboardPage() {
         ))}
       </div>
 
-      <h2 className="text-base font-semibold text-foreground mb-3">Đơn hàng gần đây</h2>
+      <h2 className="text-base font-semibold text-foreground mb-3">Đơn hàng cần xử lý</h2>
       <div className="rounded-xl border border-white/8 bg-card overflow-hidden">
         {isLoading ? (
           <div className="p-4 space-y-2">
             {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full bg-white/5" />)}
           </div>
-        ) : !data || data.recentOrders.length === 0 ? (
-          <p className="p-6 text-center text-sm text-muted-foreground">Chưa có đơn hàng.</p>
+        ) : !data || data.latestActionableOrders.length === 0 ? (
+          <p className="p-6 text-center text-sm text-muted-foreground">Không có đơn hàng nào chờ lấy hàng.</p>
         ) : (
           <div className="divide-y divide-white/6">
-            {data.recentOrders.map((o) => (
+            {data.latestActionableOrders.map((o) => (
               <button key={o.orderId} onClick={() => router.push(`/seller/orders?highlight=${o.orderId}`)}
                 className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-white/3 transition-colors">
                 <div>
-                  <p className="text-sm text-foreground">{o.buyerName}</p>
-                  <p className="text-xs text-muted-foreground">{formatDateTime(o.createdAt)}</p>
+                  <p className="text-sm text-foreground">{o.shippingRecipientName}</p>
+                  <p className="text-xs text-muted-foreground">{o.itemCount} sản phẩm · {formatDateTime(o.createdAt)}</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-primary">{formatPrice(o.grandTotal)}</span>
+                  <span className="text-sm font-medium text-primary">{formatPrice(o.totalAmount)}</span>
                   <Badge className={cn('text-[11px] border', ORDER_STATUS_CLASS[o.status])}>{ORDER_STATUS_LABEL[o.status]}</Badge>
                 </div>
               </button>

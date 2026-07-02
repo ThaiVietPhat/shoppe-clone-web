@@ -3,7 +3,7 @@
 import { use, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Image from 'next/image';
-import { Store, Star, Users, Package, MessageCircle } from 'lucide-react';
+import { Store, Star, Package, MessageCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { ProductCardResponse, ShopDetail } from '@/types/api';
@@ -58,21 +58,16 @@ export default function ShopPage({ params }: { params: Promise<{ shopId: string 
         <Skeleton className="h-40 w-full rounded-2xl bg-white/5 mb-6" />
       ) : shop ? (
         <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-card mb-6">
-          {shop.bannerUrl && (
-            <div className="absolute inset-0 opacity-30">
-              <Image src={shop.bannerUrl} alt="" fill className="object-cover" />
-            </div>
-          )}
           <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-4 p-6">
             <div className="h-20 w-20 rounded-2xl bg-primary/20 flex items-center justify-center overflow-hidden shrink-0">
-              {shop.logoUrl ? (
-                <Image src={shop.logoUrl} alt={shop.shopName} width={80} height={80} className="object-cover" />
+              {shop.logo ? (
+                <Image src={shop.logo.publicUrl} alt={shop.name} width={80} height={80} className="object-cover" />
               ) : (
                 <Store className="h-9 w-9 text-primary" />
               )}
             </div>
             <div className="flex-1">
-              <h1 className="text-xl font-bold text-foreground">{shop.shopName}</h1>
+              <h1 className="text-xl font-bold text-foreground">{shop.name}</h1>
               {shop.description && (
                 <p className="text-sm text-muted-foreground mt-1 line-clamp-2 max-w-xl">{shop.description}</p>
               )}
@@ -82,10 +77,7 @@ export default function ShopPage({ params }: { params: Promise<{ shopId: string 
                   {shop.rating.toFixed(1)}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <Package className="h-4 w-4" /> {shop.productCount} sản phẩm
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Users className="h-4 w-4" /> {shop.followerCount} người theo dõi
+                  <Package className="h-4 w-4" /> {products?.totalElements ?? 0} sản phẩm
                 </span>
               </div>
             </div>

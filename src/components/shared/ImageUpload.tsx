@@ -8,28 +8,39 @@ import { MediaUploadResponse } from '@/types/api';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
-type Purpose = 'PRODUCT_IMAGE' | 'SHOP_LOGO' | 'SHOP_BANNER' | 'AVATAR';
+// Matches backend com.shopee.monolith.modules.media.dto.internal.MediaPurposeCode
+type Purpose = 'PRODUCT_IMAGE' | 'SHOP_LOGO' | 'AVATAR';
+type OwnerType = 'SHOP' | 'USER';
 
 const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_SIZE = 10 * 1024 * 1024;
 
-async function uploadImage(file: File, purpose: Purpose): Promise<MediaUploadResponse> {
+async function uploadImage(
+  file: File,
+  purpose: Purpose,
+  ownerId: string,
+  ownerType: OwnerType
+): Promise<MediaUploadResponse> {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('purpose', purpose);
+  formData.append('ownerId', ownerId);
+  formData.append('ownerType', ownerType);
   const { data } = await api.post<{ data: MediaUploadResponse }>('/api/media/images', formData);
   return data.data;
 }
 
 interface ImageUploadProps {
   purpose: Purpose;
+  ownerId: string;
+  ownerType: OwnerType;
   value?: { mediaId: string; url: string } | null;
   onChange: (media: { mediaId: string; url: string } | null) => void;
   className?: string;
   aspect?: 'square' | 'banner';
 }
 
-export function ImageUpload({ purpose, value, onChange, className, aspect = 'square' }: ImageUploadProps) {
+export function ImageUpload({ purpose, ownerId, ownerType, value, onChange, className, aspect = 'square' }: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -44,8 +55,8 @@ export function ImageUpload({ purpose, value, onChange, className, aspect = 'squ
     }
     setUploading(true);
     try {
-      const media = await uploadImage(file, purpose);
-      onChange({ mediaId: media.mediaId, url: media.url });
+      const media = await uploadImage(file, purpose, ownerId, ownerType);
+      onChange({ mediaId: media.id, url: media.publicUrl });
     } catch {
       toast.error('Tải ảnh thất bại');
     } finally {
@@ -88,8 +99,8 @@ export function ImageUpload({ purpose, value, onChange, className, aspect = 'squ
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-          className="flex h-full w-full flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground hover:bg-white/3 transition-colors"
+          disabled={uploading || !ownerId}
+          className="flex h-full w-full flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground hover:bg-white/3 transition-colors disabled:opacity-50"
         >
           {uploading ? (
             <Loader2 className="h-6 w-6 animate-spin" />
