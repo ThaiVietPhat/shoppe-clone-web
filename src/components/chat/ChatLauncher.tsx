@@ -43,10 +43,11 @@ export function ChatLauncher() {
     enabled: isHydrated && !!user,
   });
 
+  const totalUnread = rooms?.reduce((sum, r) => sum + r.unreadCount, 0) ?? 0;
+
   // Chỉ hiện khi đã đăng nhập (và đã hydrate xong để tránh nháy).
   if (!isHydrated || !user) return null;
 
-  const totalUnread = rooms?.reduce((sum, r) => sum + r.unreadCount, 0) ?? 0;
 
   return (
     <>
@@ -137,17 +138,17 @@ function ConversationList({
           <div className="divide-y divide-white/6">
             {rooms.map((r) => (
               <button
-                key={r.roomId}
-                onClick={() => onSelectShop(r.roomId, r.shop.shopName)}
+                key={r.id}
+                onClick={() => onSelectShop(r.id, r.shopName)}
                 className="flex w-full items-center gap-3 p-3 text-left transition-colors hover:bg-white/3"
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/8 text-muted-foreground">
                   <Store className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="line-clamp-1 text-sm font-medium text-foreground">{r.shop.shopName}</p>
-                  {r.lastMessage && (
-                    <p className="line-clamp-1 text-xs text-muted-foreground">{r.lastMessage.content}</p>
+                  <p className="line-clamp-1 text-sm font-medium text-foreground">{r.shopName}</p>
+                  {r.lastMessageContent && (
+                    <p className="line-clamp-1 text-xs text-muted-foreground">{r.lastMessageContent}</p>
                   )}
                 </div>
                 {r.unreadCount > 0 && (
@@ -284,7 +285,7 @@ function AiConversation({ onBack }: { onBack: () => void }) {
             {m.items && m.items.length > 0 && (
               <div className="mt-2 w-full space-y-2">
                 {m.items.map((it) => (
-                  <AiProductRow key={it.product.productId} product={it.product} />
+                  <AiProductRow key={it.product.id} product={it.product} />
                 ))}
               </div>
             )}
@@ -329,22 +330,22 @@ function AiConversation({ onBack }: { onBack: () => void }) {
 }
 
 function AiProductRow({ product }: { product: RecommendedProductResponse['product'] }) {
-  const hasRange = product.priceMin !== product.priceMax;
+  const hasRange = product.minPrice !== product.maxPrice;
   return (
     <Link
-      href={`/products/${product.productId}`}
+      href={`/products/${product.id}`}
       className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/3 p-2 transition-colors hover:border-primary/30"
     >
       <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-white/5">
-        {product.coverImage?.url ? (
+        {product.coverImageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={product.coverImage.url} alt={product.name} className="h-full w-full object-cover" />
+          <img src={product.coverImageUrl} alt={product.name} className="h-full w-full object-cover" />
         ) : null}
       </div>
       <div className="min-w-0 flex-1">
         <p className="line-clamp-2 text-xs font-medium leading-snug text-foreground">{product.name}</p>
         <p className="mt-0.5 text-xs font-bold text-primary">
-          {hasRange ? formatPriceRange(product.priceMin, product.priceMax) : formatPrice(product.priceMin)}
+          {hasRange ? formatPriceRange(product.minPrice, product.maxPrice) : formatPrice(product.minPrice)}
         </p>
       </div>
     </Link>
@@ -391,7 +392,7 @@ function ShopConversation({
   }, [roomId, qc]);
 
   useChatSubscription(roomId, (msg) => {
-    setMessages((prev) => (prev.some((m) => m.messageId === msg.messageId) ? prev : [...prev, msg]));
+    setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
   });
 
   useEffect(() => {
@@ -408,7 +409,7 @@ function ShopConversation({
       });
       setInput('');
       setMessages((prev) =>
-        prev.some((m) => m.messageId === data.data.messageId) ? prev : [...prev, data.data]
+        prev.some((m) => m.id === data.data.id) ? prev : [...prev, data.data]
       );
     } catch {
       /* noop */
@@ -438,7 +439,7 @@ function ShopConversation({
           messages.map((m) => {
             const mine = user?.id === m.senderId;
             return (
-              <div key={m.messageId} className={cn('flex', mine ? 'justify-end' : 'justify-start')}>
+              <div key={m.id} className={cn('flex', mine ? 'justify-end' : 'justify-start')}>
                 <div
                   className={cn(
                     'max-w-[75%] rounded-2xl px-3.5 py-2',
@@ -452,7 +453,7 @@ function ShopConversation({
                       mine ? 'text-primary-foreground/70' : 'text-muted-foreground'
                     )}
                   >
-                    {formatRelative(m.sentAt)}
+                    {formatRelative(m.createdAt)}
                   </p>
                 </div>
               </div>

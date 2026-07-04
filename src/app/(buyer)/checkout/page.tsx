@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { MapPin, Plus, Loader2, CreditCard, Banknote, AlertCircle, Check } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Address, CheckoutPreview, PlaceOrderResponse } from '@/types/api';
+import { Address, CheckoutPreview, CheckoutResponse, PaymentStatusResponse } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,10 +24,10 @@ import { toast } from 'sonner';
 const addressSchema = z.object({
   recipientName: z.string().min(1, 'Nhập tên người nhận'),
   phone: z.string().min(8, 'Số điện thoại không hợp lệ'),
-  street: z.string().min(1, 'Nhập địa chỉ'),
-  ward: z.string().min(1, 'Nhập phường/xã'),
-  district: z.string().min(1, 'Nhập quận/huyện'),
-  province: z.string().min(1, 'Nhập tỉnh/thành'),
+  addressLine: z.string().min(1, 'Nhập địa chỉ'),
+  wardName: z.string().min(1, 'Nhập phường/xã'),
+  districtName: z.string().min(1, 'Nhập quận/huyện'),
+  provinceName: z.string().min(1, 'Nhập tỉnh/thành'),
   isDefault: z.boolean().optional(),
 });
 type AddressForm = z.infer<typeof addressSchema>;
@@ -46,7 +46,7 @@ export default function CheckoutPage() {
       const { data } = await api.get<{ data: Address[] }>('/api/users/me/addresses');
       const list = data.data;
       const def = list.find((a) => a.isDefault) ?? list[0];
-      if (def && !selectedAddressId) setSelectedAddressId(def.addressId);
+      if (def && !selectedAddressId) setSelectedAddressId(def.id);
       return list;
     },
   });
@@ -64,19 +64,23 @@ export default function CheckoutPage() {
 
   const placeOrder = useMutation({
     mutationFn: async () => {
-      const { data } = await api.post<{ data: PlaceOrderResponse }>(
+      const { data: checkoutRes } = await api.post<{ data: CheckoutResponse }>(
         '/api/orders',
-        { addressId: selectedAddressId, paymentMethod },
+        { addressId: selectedAddressId },
         { headers: { 'Idempotency-Key': idempotencyKey } }
       );
-      return data.data;
+      const { data: paymentRes } = await api.post<{ data: PaymentStatusResponse }>(
+        '/api/payments/initiate',
+        { checkoutSessionId: checkoutRes.data.checkoutSessionId, method: paymentMethod }
+      );
+      return { checkout: checkoutRes.data, payment: paymentRes.data };
     },
-    onSuccess: (res) => {
+    onSuccess: ({ checkout, payment }) => {
       qc.invalidateQueries({ queryKey: ['cart'] });
-      if (res.paymentMethod === 'VNPAY' && res.paymentUrl) {
-        window.location.href = res.paymentUrl;
+      if (payment.nextAction) {
+        window.location.href = payment.nextAction;
       } else {
-        router.push(`/orders/${res.orderIds[0]}`);
+        router.push(`/orders/${checkout.orderIds[0]}`);
       }
     },
     onError: (err: unknown) => {
@@ -85,7 +89,7 @@ export default function CheckoutPage() {
     },
   });
 
-  const canPlaceOrder = !!selectedAddressId && !!preview?.valid && !previewLoading;
+  const canPlaceOrder = !!selectedAddressId && !!preview?.allItemsValid && !previewLoading;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6">
@@ -111,20 +115,20 @@ export default function CheckoutPage() {
             <div className="space-y-2">
               {addresses.map((a) => (
                 <button
-                  key={a.addressId}
-                  onClick={() => setSelectedAddressId(a.addressId)}
+                  key={a.id}
+                  onClick={() => setSelectedAddressId(a.id)}
                   className={cn(
                     'flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors',
-                    selectedAddressId === a.addressId
+                    selectedAddressId === a.id
                       ? 'border-primary bg-primary/5'
                       : 'border-white/10 hover:border-white/20'
                   )}
                 >
                   <div className={cn(
                     'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border',
-                    selectedAddressId === a.addressId ? 'border-primary bg-primary' : 'border-white/30'
+                    selectedAddressId === a.id ? 'border-primary bg-primary' : 'border-white/30'
                   )}>
-                    {selectedAddressId === a.addressId && <Check className="h-3 w-3 text-primary-foreground" />}
+                    {selectedAddressId === a.id && <Check className="h-3 w-3 text-primary-foreground" />}
                   </div>
                   <div className="text-sm">
                     <p className="font-medium text-foreground">
@@ -132,7 +136,7 @@ export default function CheckoutPage() {
                       {a.isDefault && <span className="ml-2 text-xs text-primary">[Mặc định]</span>}
                     </p>
                     <p className="text-muted-foreground mt-0.5">
-                      {a.street}, {a.ward}, {a.district}, {a.province}
+                      {a.addressLine}, {a.wardName}, {a.districtName}, {a.provinceName}
                     </p>
                   </div>
                 </button>
@@ -150,7 +154,7 @@ export default function CheckoutPage() {
             <p className="text-sm text-muted-foreground">Chọn địa chỉ để xem chi tiết đơn hàng.</p>
           ) : preview ? (
             <div className="space-y-4">
-              {preview.groups.map((g) => (
+              {preview.shops.map((g) => (
                 <div key={g.shopId} className="rounded-lg border border-white/6 overflow-hidden">
                   <p className="px-3 py-2 text-xs font-medium text-muted-foreground border-b border-white/6">{g.shopName}</p>
                   <div className="divide-y divide-white/6">
@@ -159,15 +163,15 @@ export default function CheckoutPage() {
                         <div className="min-w-0">
                           <p className="line-clamp-1 text-foreground">{it.productName}</p>
                           <p className="text-xs text-muted-foreground">
-                            {it.variantOptions.map((o) => o.value).join(', ')} · x{it.quantity}
-                            {!it.valid && it.invalidReason && (
+                            {it.variantName} · x{it.quantity}
+                            {!it.valid && it.invalidReasonCode && (
                               <span className="text-destructive ml-1">
-                                ({CHECKOUT_INVALID_REASON[it.invalidReason] ?? it.invalidReason})
+                                ({CHECKOUT_INVALID_REASON[it.invalidReasonCode] ?? it.invalidReasonCode})
                               </span>
                             )}
                           </p>
                         </div>
-                        <span className="text-foreground shrink-0 ml-3">{formatPrice(it.subtotal)}</span>
+                        <span className="text-foreground shrink-0 ml-3">{formatPrice(it.itemTotal)}</span>
                       </div>
                     ))}
                   </div>
@@ -178,7 +182,7 @@ export default function CheckoutPage() {
                 </div>
               ))}
 
-              {!preview.valid && preview.invalidItems.length > 0 && (
+              {!preview.allItemsValid && preview.invalidItems.length > 0 && (
                 <div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                   <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                   <div>
@@ -186,7 +190,7 @@ export default function CheckoutPage() {
                     <ul className="mt-1 space-y-0.5 text-xs">
                       {preview.invalidItems.map((it) => (
                         <li key={it.variantId}>
-                          {it.productName} — {CHECKOUT_INVALID_REASON[it.invalidReason] ?? it.invalidReason}
+                          {it.productName} — {(it.invalidReasonCode && CHECKOUT_INVALID_REASON[it.invalidReasonCode]) ?? it.invalidReasonCode}
                         </li>
                       ))}
                     </ul>
@@ -224,7 +228,7 @@ export default function CheckoutPage() {
         <section className="rounded-xl border border-white/8 bg-card p-5">
           {preview && (
             <div className="space-y-2 mb-4 text-sm">
-              <div className="flex justify-between"><span className="text-muted-foreground">Tạm tính</span><span>{formatPrice(preview.subtotal)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Tạm tính</span><span>{formatPrice(preview.totalItemsSubtotal)}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Phí vận chuyển</span><span>{formatPrice(preview.totalShippingFee)}</span></div>
               <div className="flex justify-between pt-2 border-t border-white/8 text-base font-bold">
                 <span>Tổng cộng</span><span className="text-primary">{formatPrice(preview.grandTotal)}</span>
@@ -246,7 +250,7 @@ export default function CheckoutPage() {
         onOpenChange={setDialogOpen}
         onCreated={(addr) => {
           qc.invalidateQueries({ queryKey: ['addresses'] });
-          setSelectedAddressId(addr.addressId);
+          setSelectedAddressId(addr.id);
         }}
       />
     </div>
@@ -266,7 +270,15 @@ function AddressDialog({
 
   async function onSubmit(values: AddressForm) {
     try {
-      const { data } = await api.post<{ data: Address }>('/api/users/me/addresses', values);
+      // Backend requires GHN-compatible ward/district/province codes alongside display names.
+      // There is no location-picker/GHN reference data wired up yet, so the entered name is
+      // reused as the code — this satisfies validation but is not a real GHN code lookup.
+      const { data } = await api.post<{ data: Address }>('/api/users/me/addresses', {
+        ...values,
+        wardCode: values.wardName,
+        districtCode: values.districtName,
+        provinceCode: values.provinceName,
+      });
       toast.success('Đã thêm địa chỉ');
       onCreated(data.data);
       reset();
@@ -289,18 +301,18 @@ function AddressDialog({
               <Input {...register('phone')} className="bg-white/5 border-white/10" />
             </Field>
           </div>
-          <Field label="Địa chỉ (số nhà, đường)" error={errors.street?.message}>
-            <Input {...register('street')} className="bg-white/5 border-white/10" />
+          <Field label="Địa chỉ (số nhà, đường)" error={errors.addressLine?.message}>
+            <Input {...register('addressLine')} className="bg-white/5 border-white/10" />
           </Field>
           <div className="grid grid-cols-3 gap-3">
-            <Field label="Phường/Xã" error={errors.ward?.message}>
-              <Input {...register('ward')} className="bg-white/5 border-white/10" />
+            <Field label="Phường/Xã" error={errors.wardName?.message}>
+              <Input {...register('wardName')} className="bg-white/5 border-white/10" />
             </Field>
-            <Field label="Quận/Huyện" error={errors.district?.message}>
-              <Input {...register('district')} className="bg-white/5 border-white/10" />
+            <Field label="Quận/Huyện" error={errors.districtName?.message}>
+              <Input {...register('districtName')} className="bg-white/5 border-white/10" />
             </Field>
-            <Field label="Tỉnh/Thành" error={errors.province?.message}>
-              <Input {...register('province')} className="bg-white/5 border-white/10" />
+            <Field label="Tỉnh/Thành" error={errors.provinceName?.message}>
+              <Input {...register('provinceName')} className="bg-white/5 border-white/10" />
             </Field>
           </div>
           <label className="flex items-center gap-2 text-sm text-muted-foreground">

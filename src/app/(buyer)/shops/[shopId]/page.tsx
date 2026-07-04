@@ -105,7 +105,7 @@ export default function ShopPage({ params }: { params: Promise<{ shopId: string 
       ) : (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {products.content.map((p) => <ProductCard key={p.productId} product={p} />)}
+            {products.content.map((p) => <ProductCard key={p.id} product={p} />)}
           </div>
           <Pagination className="mt-8" page={products.page} totalPages={products.totalPages} onPageChange={setPage} />
         </>

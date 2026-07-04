@@ -23,7 +23,7 @@ export default function CartPage() {
   const allSelected = items.length > 0 && selectedItems.length === items.length;
 
   const groups = useMemo(() => {
-    const map = new Map<string, { shopId: string; shopName: string; items: CartItem[] }>();
+    const map = new Map<string, { shopId: string; shopName: string | null; items: CartItem[] }>();
     for (const item of items) {
       if (!map.has(item.shopId)) {
         map.set(item.shopId, { shopId: item.shopId, shopName: item.shopName, items: [] });
@@ -114,8 +114,8 @@ export default function CartPage() {
                       href={`/products/${item.productId}`}
                       className="relative h-16 w-16 shrink-0 rounded-lg overflow-hidden bg-white/5"
                     >
-                      {item.coverImage?.url ? (
-                        <Image src={item.coverImage.url} alt={item.productName} fill sizes="64px" className="object-cover" />
+                      {item.coverImageUrl ? (
+                        <Image src={item.coverImageUrl} alt={item.productName} fill sizes="64px" className="object-cover" />
                       ) : (
                         <div className="flex h-full items-center justify-center text-muted-foreground/30">
                           <ShoppingCart className="h-5 w-5" />
@@ -127,9 +127,9 @@ export default function CartPage() {
                       <Link href={`/products/${item.productId}`} className="text-sm font-medium line-clamp-1 hover:text-primary transition-colors">
                         {item.productName}
                       </Link>
-                      {item.variantOptions.length > 0 && (
+                      {Object.keys(item.optionLabels).length > 0 && (
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {item.variantOptions.map((o) => o.value).join(', ')}
+                          {Object.values(item.optionLabels).join(', ')}
                         </p>
                       )}
                       <p className="text-sm font-bold text-primary mt-1">{formatPrice(item.price)}</p>

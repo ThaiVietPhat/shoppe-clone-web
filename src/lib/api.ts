@@ -13,7 +13,6 @@ export function getAccessToken() {
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080',
   withCredentials: true,
-  headers: { 'Content-Type': 'application/json' },
   xsrfCookieName: 'XSRF-TOKEN',
   xsrfHeaderName: 'X-XSRF-TOKEN',
   // axios >= 1.6 chỉ gắn header X-XSRF-TOKEN cho request khác origin khi bật cờ này

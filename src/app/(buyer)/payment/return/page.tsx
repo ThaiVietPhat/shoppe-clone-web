@@ -22,16 +22,22 @@ function PaymentReturnContent() {
     let timer: ReturnType<typeof setTimeout>;
     let cancelled = false;
 
+    // The backend's VNPay return endpoint (GET /api/payments/return/vnpay) validates the
+    // gateway redirect and 302s the browser here with ?checkoutSessionId=... attached —
+    // this page only ever needs to poll the JSON status endpoint, never call the redirect itself.
+    const sessionId = sessionRef.current ?? params.get('checkoutSessionId');
+    if (!sessionId) {
+      setError(true);
+      return;
+    }
+    sessionRef.current = sessionId;
+
     async function poll() {
       try {
-        const sessionId = sessionRef.current;
-        const res = sessionId
-          ? await api.get<{ data: PaymentStatusResponse }>(`/api/payments/status/${sessionId}`)
-          : await api.get<{ data: PaymentStatusResponse }>(`/api/payments/vnpay/return?${params.toString()}`);
+        const res = await api.get<{ data: PaymentStatusResponse }>(`/api/payments/status/${sessionRef.current}`);
         if (cancelled) return;
 
         const data = res.data.data;
-        sessionRef.current = data.checkoutSessionId;
         setResult(data);
 
         if (data.status === 'SUCCEEDED' && data.orderIds[0]) {
@@ -74,8 +80,8 @@ function PaymentReturnContent() {
           <Button variant="outline" className="border-white/10" onClick={() => router.push('/orders')}>Xem đơn hàng</Button>
           <Button className="bg-primary gap-2" onClick={async () => {
             try {
-              const { data } = await api.post('/api/payments/initiate', { checkoutSessionId: result.checkoutSessionId, paymentMethod: 'VNPAY' });
-              if (data.data.paymentUrl) window.location.href = data.data.paymentUrl;
+              const { data } = await api.post<{ data: PaymentStatusResponse }>('/api/payments/initiate', { checkoutSessionId: result.checkoutSessionId, method: 'VNPAY' });
+              if (data.data.nextAction) window.location.href = data.data.nextAction;
             } catch { /* noop */ }
           }}><RefreshCw className="h-4 w-4" /> Thử lại</Button>
         </div>

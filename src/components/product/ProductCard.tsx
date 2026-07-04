@@ -26,15 +26,15 @@ export function ProductCard({ product, className }: ProductCardProps) {
       return;
     }
     // Navigate to product detail for variant selection
-    window.location.href = `/products/${product.productId}`;
+    window.location.href = `/products/${product.id}`;
   }
 
-  const imageUrl = product.coverImage?.url;
-  const hasRange = product.priceMin !== product.priceMax;
+  const imageUrl = product.coverImageUrl;
+  const hasRange = product.minPrice !== product.maxPrice;
 
   return (
     <Link
-      href={`/products/${product.productId}`}
+      href={`/products/${product.id}`}
       className={cn(
         'group relative flex flex-col overflow-hidden rounded-xl bg-card border border-white/6',
         'hover:border-primary/30 hover:shadow-lg hover:shadow-black/40 transition-all duration-200',
@@ -76,28 +76,21 @@ export function ProductCard({ product, className }: ProductCardProps) {
         <div className="flex items-baseline gap-1">
           <span className="text-base font-bold text-primary">
             {hasRange
-              ? formatPriceRange(product.priceMin, product.priceMax)
-              : formatPrice(product.priceMin)}
+              ? formatPriceRange(product.minPrice, product.maxPrice)
+              : formatPrice(product.minPrice)}
           </span>
         </div>
 
         {/* Stats */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            {product.rating != null && (
-              <>
-                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                <span>{product.rating.toFixed(1)}</span>
-              </>
-            )}
+        {product.shopRating != null && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+            <span>{product.shopRating.toFixed(1)}</span>
           </div>
-          {product.soldCount > 0 && (
-            <span>Đã bán {product.soldCount > 1000 ? `${(product.soldCount / 1000).toFixed(1)}k` : product.soldCount}</span>
-          )}
-        </div>
+        )}
 
         {/* Shop */}
-        <p className="text-xs text-muted-foreground/70 truncate">{product.shop.shopName}</p>
+        <p className="text-xs text-muted-foreground/70 truncate">{product.shopName}</p>
       </div>
 
       {/* Quick add — visible on hover */}

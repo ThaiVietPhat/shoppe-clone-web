@@ -88,10 +88,12 @@ export default function SellerProductsPage() {
       ) : (
         <>
           <div className="space-y-3">
-            {data.content.map((p) => (
-              <div key={p.productId} className="flex items-center gap-4 rounded-xl border border-white/8 bg-card p-4">
+            {data.content.map((p) => {
+              const cover = p.media.find((m) => m.cover) ?? p.media[0];
+              return (
+              <div key={p.id} className="flex items-center gap-4 rounded-xl border border-white/8 bg-card p-4">
                 <div className="relative h-16 w-16 shrink-0 rounded-lg overflow-hidden bg-white/5">
-                  {p.coverImageUrl ? <Image src={p.coverImageUrl} alt="" fill sizes="64px" className="object-cover" /> : (
+                  {cover ? <Image src={cover.publicUrl} alt="" fill sizes="64px" className="object-cover" /> : (
                     <div className="flex h-full items-center justify-center text-muted-foreground/30"><Package className="h-6 w-6" /></div>
                   )}
                 </div>
@@ -100,31 +102,32 @@ export default function SellerProductsPage() {
                     <p className="text-sm font-medium line-clamp-1">{p.name}</p>
                     <Badge className={cn('text-[10px] border shrink-0', STATUS_CLASS[p.status] ?? STATUS_CLASS.DRAFT)}>{STATUS_LABEL[p.status] ?? p.status}</Badge>
                   </div>
-                  <p className="text-sm text-primary font-medium mt-0.5">{formatPriceRange(p.priceMin, p.priceMax)}</p>
+                  <p className="text-sm text-primary font-medium mt-0.5">{formatPriceRange(p.minPrice, p.maxPrice)}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {p.variantCount} phiên bản · Kho {p.totalStock} · Đã bán {p.soldCount} · {formatDateTime(p.updatedAt)}
+                    {p.variants.length} phiên bản · Kho {p.totalAvailableStock} · {formatDateTime(p.updatedAt)}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <Link href={`/seller/products/${p.productId}/edit`}>
+                  <Link href={`/seller/products/${p.id}/edit`}>
                     <Button size="sm" variant="outline" className="border-white/10 gap-1 text-xs"><Pencil className="h-3.5 w-3.5" /> Sửa</Button>
                   </Link>
                   {p.status === 'ACTIVE' ? (
                     <Button size="sm" variant="outline" className="border-white/10 gap-1 text-xs"
                       disabled={togglePublish.isPending}
-                      onClick={() => togglePublish.mutate({ id: p.productId, publish: false })}>
+                      onClick={() => togglePublish.mutate({ id: p.id, publish: false })}>
                       <EyeOff className="h-3.5 w-3.5" /> Ẩn
                     </Button>
                   ) : (
                     <Button size="sm" variant="outline" className="border-primary/40 text-primary gap-1 text-xs"
                       disabled={togglePublish.isPending}
-                      onClick={() => togglePublish.mutate({ id: p.productId, publish: true })}>
+                      onClick={() => togglePublish.mutate({ id: p.id, publish: true })}>
                       <Eye className="h-3.5 w-3.5" /> Đăng bán
                     </Button>
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
           <Pagination className="mt-8" page={data.page} totalPages={data.totalPages} onPageChange={setPage} />
         </>

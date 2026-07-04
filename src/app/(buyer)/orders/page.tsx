@@ -18,14 +18,15 @@ import { ORDER_STATUS_LABEL, ORDER_STATUS_CLASS, ORDER_STATUS_FILTERS } from '@/
 function OrdersContent() {
   const router = useRouter();
   const params = useSearchParams();
-  const status = params.get('status') ?? 'ALL';
+  const status = params.get('status') ?? '';
   const [page, setPage] = useState(0);
 
   const { data, isLoading } = useQuery({
     queryKey: ['buyer-orders', status, page],
     queryFn: async () => {
+      const statusQuery = status ? `&status=${status}` : '';
       const { data } = await api.get<{ data: PagedResponse<OrderSummary> }>(
-        `/api/buyer/orders?page=${page}&size=20&status=${status}`
+        `/api/buyer/orders?page=${page}&size=20${statusQuery}`
       );
       return pageFrom(data.data);
     },
@@ -33,7 +34,7 @@ function OrdersContent() {
 
   function setStatus(s: string) {
     setPage(0);
-    router.push(`/orders?status=${s}`);
+    router.push(s ? `/orders?status=${s}` : '/orders');
   }
 
   return (
@@ -72,29 +73,29 @@ function OrdersContent() {
                 className="block w-full rounded-xl border border-white/8 bg-card p-4 text-left hover:border-primary/30 transition-colors"
               >
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-foreground">{order.shop.shopName}</span>
+                  <span className="text-sm font-medium text-foreground">{order.shopName}</span>
                   <Badge className={cn('text-[11px] border', ORDER_STATUS_CLASS[order.status])}>
                     {ORDER_STATUS_LABEL[order.status]}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="relative h-14 w-14 shrink-0 rounded-lg overflow-hidden bg-white/5">
-                    {order.coverItem.coverImageUrl ? (
-                      <Image src={order.coverItem.coverImageUrl} alt="" fill sizes="56px" className="object-cover" />
+                    {order.coverImageUrl ? (
+                      <Image src={order.coverImageUrl} alt="" fill sizes="56px" className="object-cover" />
                     ) : (
                       <div className="flex h-full items-center justify-center text-muted-foreground/30"><Package className="h-5 w-5" /></div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm line-clamp-1 text-foreground">{order.coverItem.productName}</p>
+                    <p className="text-sm line-clamp-1 text-foreground">{order.coverProductName ?? `${order.itemCount} sản phẩm`}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {order.itemCount > 1 ? `và ${order.itemCount - 1} sản phẩm khác` : `x${order.coverItem.quantity}`}
+                      {order.itemCount > 1 ? `và ${order.itemCount - 1} sản phẩm khác` : `x${order.coverItemQuantity}`}
                     </p>
                     <p className="text-xs text-muted-foreground/70 mt-0.5">{formatDateTime(order.createdAt)}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-muted-foreground">Tổng tiền</p>
-                    <p className="text-base font-bold text-primary">{formatPrice(order.grandTotal)}</p>
+                    <p className="text-base font-bold text-primary">{formatPrice(order.totalAmount)}</p>
                   </div>
                 </div>
               </button>

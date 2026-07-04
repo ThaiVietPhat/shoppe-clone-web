@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Bell, Package, Truck, PackageCheck, CheckCircle2, XCircle, Star, CheckCheck,
+  Bell, Truck, PackageCheck, CheckCircle2, Star, CheckCheck,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Notification } from '@/types/api';
@@ -19,8 +19,6 @@ const TYPE_ICON: Record<string, typeof Bell> = {
   ORDER_CONFIRMED: CheckCircle2,
   ORDER_SHIPPED: Truck,
   ORDER_DELIVERED: PackageCheck,
-  ORDER_COMPLETED: Package,
-  ORDER_CANCELLED: XCircle,
   REVIEW_REMINDER: Star,
 };
 
@@ -57,8 +55,8 @@ export default function NotificationsPage() {
   });
 
   function handleClick(n: Notification) {
-    if (!n.read) markRead.mutate(n.notificationId);
-    if (n.metadata?.orderId) router.push(`/orders/${n.metadata.orderId}`);
+    if (!n.readAt) markRead.mutate(n.id);
+    if (n.refType === 'ORDER' && n.refId) router.push(`/orders/${n.refId}`);
   }
 
   return (
@@ -89,19 +87,20 @@ export default function NotificationsPage() {
           <div className="space-y-2">
             {data.content.map((n) => {
               const Icon = TYPE_ICON[n.type] ?? Bell;
+              const read = !!n.readAt;
               return (
-                <button key={n.notificationId} onClick={() => handleClick(n)}
+                <button key={n.id} onClick={() => handleClick(n)}
                   className={cn('flex w-full items-start gap-3 rounded-xl border p-4 text-left transition-colors',
-                    n.read ? 'border-white/8 bg-card hover:bg-white/3' : 'border-primary/20 bg-primary/5 hover:bg-primary/10')}>
-                  <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', n.read ? 'bg-white/5 text-muted-foreground' : 'bg-primary/15 text-primary')}>
+                    read ? 'border-white/8 bg-card hover:bg-white/3' : 'border-primary/20 bg-primary/5 hover:bg-primary/10')}>
+                  <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', read ? 'bg-white/5 text-muted-foreground' : 'bg-primary/15 text-primary')}>
                     <Icon className="h-4.5 w-4.5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={cn('text-sm', n.read ? 'text-foreground' : 'text-foreground font-medium')}>{n.title}</p>
+                    <p className={cn('text-sm', read ? 'text-foreground' : 'text-foreground font-medium')}>{n.title}</p>
                     <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">{n.body}</p>
                     <p className="text-xs text-muted-foreground/60 mt-1">{formatRelative(n.createdAt)}</p>
                   </div>
-                  {!n.read && <span className="h-2 w-2 rounded-full bg-primary shrink-0 mt-2" />}
+                  {!read && <span className="h-2 w-2 rounded-full bg-primary shrink-0 mt-2" />}
                 </button>
               );
             })}

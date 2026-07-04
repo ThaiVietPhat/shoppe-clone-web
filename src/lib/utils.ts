@@ -30,3 +30,12 @@ export function formatPriceRange(min: number, max: number): string {
   if (min === max) return formatPrice(min);
   return `${formatPrice(min)} – ${formatPrice(max)}`;
 }
+
+// Backend only returns raw availableStock; there is no server-side stockStatus enum.
+const LOW_STOCK_THRESHOLD = 5;
+
+export function getStockStatus(availableStock: number): 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' {
+  if (availableStock <= 0) return 'OUT_OF_STOCK';
+  if (availableStock <= LOW_STOCK_THRESHOLD) return 'LOW_STOCK';
+  return 'IN_STOCK';
+}

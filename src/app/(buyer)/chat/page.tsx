@@ -41,15 +41,15 @@ function ChatContent() {
           ) : (
             <div className="divide-y divide-white/6">
               {rooms.map((r) => (
-                <button key={r.roomId} onClick={() => router.push(`/chat?roomId=${r.roomId}`)}
+                <button key={r.id} onClick={() => router.push(`/chat?roomId=${r.id}`)}
                   className={cn('flex w-full items-center gap-3 p-3 text-left transition-colors',
-                    activeRoomId === r.roomId ? 'bg-primary/10' : 'hover:bg-white/3')}>
+                    activeRoomId === r.id ? 'bg-primary/10' : 'hover:bg-white/3')}>
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
                     <Store className="h-5 w-5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium line-clamp-1">{r.shop.shopName}</p>
-                    {r.lastMessage && <p className="text-xs text-muted-foreground line-clamp-1">{r.lastMessage.content}</p>}
+                    <p className="text-sm font-medium line-clamp-1">{r.shopName}</p>
+                    {r.lastMessageContent && <p className="text-xs text-muted-foreground line-clamp-1">{r.lastMessageContent}</p>}
                   </div>
                   {r.unreadCount > 0 && (
                     <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{r.unreadCount}</span>
@@ -63,7 +63,7 @@ function ChatContent() {
         {/* Active room */}
         <div className="rounded-xl border border-white/8 bg-card overflow-hidden flex flex-col">
           {activeRoomId ? (
-            <ChatRoomView key={activeRoomId} roomId={activeRoomId} shopName={rooms?.find((r) => r.roomId === activeRoomId)?.shop.shopName} />
+            <ChatRoomView key={activeRoomId} roomId={activeRoomId} shopName={rooms?.find((r) => r.id === activeRoomId)?.shopName} />
           ) : (
             <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">Chọn một cuộc trò chuyện</div>
           )}
@@ -98,7 +98,7 @@ function ChatRoomView({ roomId, shopName }: { roomId: string; shopName?: string 
   }, [roomId, qc]);
 
   useChatSubscription(roomId, (msg) => {
-    setMessages((prev) => prev.some((m) => m.messageId === msg.messageId) ? prev : [...prev, msg]);
+    setMessages((prev) => prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]);
   });
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
@@ -110,7 +110,7 @@ function ChatRoomView({ roomId, shopName }: { roomId: string; shopName?: string 
     try {
       const { data } = await api.post<{ data: ChatMessage }>(`/api/chat/rooms/${roomId}/messages`, { content });
       setInput('');
-      setMessages((prev) => prev.some((m) => m.messageId === data.data.messageId) ? prev : [...prev, data.data]);
+      setMessages((prev) => prev.some((m) => m.id === data.data.id) ? prev : [...prev, data.data]);
     } catch {
       /* noop */
     } finally {
@@ -133,11 +133,11 @@ function ChatRoomView({ roomId, shopName }: { roomId: string; shopName?: string 
           messages.map((m) => {
             const mine = user?.id === m.senderId;
             return (
-              <div key={m.messageId} className={cn('flex', mine ? 'justify-end' : 'justify-start')}>
+              <div key={m.id} className={cn('flex', mine ? 'justify-end' : 'justify-start')}>
                 <div className={cn('max-w-[75%] rounded-2xl px-3.5 py-2',
                   mine ? 'bg-primary text-primary-foreground' : 'bg-white/8 text-foreground')}>
                   <p className="text-sm whitespace-pre-wrap break-words">{m.content}</p>
-                  <p className={cn('text-[10px] mt-0.5', mine ? 'text-primary-foreground/70' : 'text-muted-foreground')}>{formatRelative(m.sentAt)}</p>
+                  <p className={cn('text-[10px] mt-0.5', mine ? 'text-primary-foreground/70' : 'text-muted-foreground')}>{formatRelative(m.createdAt)}</p>
                 </div>
               </div>
             );

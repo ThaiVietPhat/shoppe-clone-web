@@ -41,71 +41,86 @@ export interface CurrentUserResponse {
 }
 
 // Catalog
-export interface MediaInfo {
+// Matches com.shopee.monolith.modules.media.dto.response.ProductMediaSummary
+export interface ProductMediaSummary {
   mediaId: string;
-  url: string;
+  publicUrl: string;
+  objectKey: string;
   contentType: string;
+  sortOrder: number;
+  cover: boolean;
 }
 
-export interface ShopSummary {
+// Matches com.shopee.monolith.modules.product.dto.response.ShopSummaryDto
+export interface ShopSummaryDto {
+  id: string;
+  name: string;
+  rating: number | null;
+}
+
+// Structured publish/checkout eligibility issue codes (see backend ProductEligibilityIssue enum)
+export type ProductEligibilityIssue = 'PRODUCT_NOT_ACTIVE' | 'NO_ACTIVE_VARIANT' | 'NO_POSITIVE_PRICE' | 'NO_STOCK';
+
+// Matches com.shopee.monolith.modules.product.dto.response.ProductCardResponse
+export interface ProductCardResponse {
+  id: string;
+  name: string;
+  brand: string | null;
+  sellerSku: string | null;
+  coverImageUrl: string | null;
+  coverMediaId: string | null;
+  coverObjectKey: string | null;
+  coverContentType: string | null;
+  minPrice: number;
+  maxPrice: number;
+  status: 'ACTIVE' | 'INACTIVE' | 'DRAFT' | 'DELETED';
   shopId: string;
   shopName: string;
-  logoUrl: string | null;
-}
-
-export interface ProductCardResponse {
-  productId: string;
-  name: string;
-  slug: string | null;
-  coverImage: MediaInfo | null;
-  priceMin: number;
-  priceMax: number;
-  shop: ShopSummary;
-  rating: number | null;
-  soldCount: number;
-  status: 'ACTIVE' | 'INACTIVE' | 'DRAFT' | 'DELETED';
-  checkoutEligible: boolean;
+  shopRating: number | null;
   categoryPath: string | null;
-  reasonCode?: string;
-  reasonLabel?: string;
+  checkoutEligible: boolean;
+  eligibilityIssues: ProductEligibilityIssue[];
+  createdAt: string;
 }
 
-export interface VariantOption {
-  name: string;
-  value: string;
-}
-
+// Matches com.shopee.monolith.modules.product.dto.response.ProductVariantDetailResponse
 export interface ProductVariant {
-  variantId: string;
+  id: string;
+  productId: string;
   sku: string;
-  options: VariantOption[];
+  name: string;
   price: number;
-  stockStatus: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
+  optionLabels: Record<string, string>;
+  active: boolean;
   availableStock: number;
   checkoutEligible: boolean;
+  coverMedia: ProductMediaSummary | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface ProductAttribute {
-  name: string;
-  value: string;
-}
-
+// Matches com.shopee.monolith.modules.product.dto.response.ProductDetailResponse
 export interface ProductDetail {
-  productId: string;
+  id: string;
+  shopId: string;
+  status: string;
   name: string;
   description: string;
   brand: string | null;
+  sellerSku: string | null;
+  categoryId: string;
   categoryPath: string | null;
-  status: string;
-  checkoutEligible: boolean;
-  attributes: ProductAttribute[];
-  priceMin: number;
-  priceMax: number;
-  rating: number | null;
-  soldCount: number;
-  shop: ShopSummary & { description?: string; bannerUrl?: string | null };
-  media: (MediaInfo & { isPrimary: boolean })[];
+  attributes: Record<string, unknown>;
+  minPrice: number;
+  maxPrice: number;
+  hasCover: boolean;
+  media: ProductMediaSummary[];
   variants: ProductVariant[];
+  eligibilityIssues: ProductEligibilityIssue[];
+  shop: ShopSummaryDto;
+  totalAvailableStock: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CategoryNode {
@@ -145,21 +160,22 @@ export interface SearchResult extends Page<ProductCardResponse> {
 }
 
 // Cart
+// Matches com.shopee.monolith.modules.cart.dto.response.CartItemResponse
 export interface CartItem {
   variantId: string;
   productId: string;
+  shopId: string;
+  shopName: string | null;
   productName: string;
-  variantOptions: VariantOption[];
+  variantName: string;
+  optionLabels: Record<string, string>;
   sku: string;
   price: number;
-  coverImage: MediaInfo | null;
-  shopId: string;
-  shopName: string;
-  quantity: number;
-  selected: boolean;
-  stockStatus: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
+  coverImageUrl: string | null;
   availableStock: number;
   checkoutEligible: boolean;
+  quantity: number;
+  selected: boolean;
 }
 
 export interface Cart {
@@ -168,208 +184,218 @@ export interface Cart {
 }
 
 // Address
+// Matches com.shopee.monolith.modules.user.dto.response.AddressResponse
 export interface Address {
-  addressId: string;
+  id: string;
   recipientName: string;
   phone: string;
-  street: string;
-  ward: string;
-  district: string;
-  province: string;
+  addressLine: string;
+  wardCode: string;
+  wardName: string;
+  districtCode: string;
+  districtName: string;
+  provinceCode: string;
+  provinceName: string;
   isDefault: boolean;
 }
 
 // Checkout
+// Matches com.shopee.monolith.modules.order.dto.response.CheckoutPreviewItemResult
 export interface CheckoutPreviewItem {
   variantId: string;
+  productId: string;
   productName: string;
-  variantOptions: VariantOption[];
+  variantName: string;
+  sku: string;
   quantity: number;
   unitPrice: number;
-  subtotal: number;
+  itemTotal: number;
   valid: boolean;
-  invalidReason: string | null;
+  invalidReasonCode: 'PRODUCT_INACTIVE' | 'VARIANT_INACTIVE' | 'INSUFFICIENT_STOCK' | null;
 }
 
+// Matches com.shopee.monolith.modules.order.dto.response.CheckoutPreviewShopGroup
 export interface CheckoutPreviewGroup {
   shopId: string;
   shopName: string;
   items: CheckoutPreviewItem[];
-  subtotal: number;
+  itemsSubtotal: number;
   shippingFee: number;
+  shopTotal: number;
 }
 
+// Matches com.shopee.monolith.modules.order.dto.response.CheckoutPreviewResponse
 export interface CheckoutPreview {
-  valid: boolean;
-  groups: CheckoutPreviewGroup[];
-  subtotal: number;
+  shops: CheckoutPreviewGroup[];
+  invalidItems: CheckoutPreviewItem[];
+  totalItemsSubtotal: number;
   totalShippingFee: number;
   grandTotal: number;
-  invalidItems: {
-    variantId: string;
-    productName: string;
-    invalidReason: string;
-    availableStock: number;
-    requestedQuantity: number;
-  }[];
+  allItemsValid: boolean;
+  addressId: string;
+  cartVersion: number;
 }
 
-export interface PlaceOrderResponse {
+// Matches com.shopee.monolith.modules.order.dto.response.CheckoutResponse (POST /api/orders)
+export interface CheckoutResponse {
   checkoutSessionId: string;
   orderIds: string[];
-  paymentMethod: 'VNPAY' | 'COD';
-  grandTotal: number;
+  status: string;
+  itemsSubtotal: number;
+  shippingFee: number;
+  totalAmount: number;
   expiresAt: string;
-  paymentUrl?: string;
+}
+
+// Matches com.shopee.monolith.modules.payment.dto.response.PaymentStatusResponse
+// (response of POST /api/payments/initiate and GET /api/payments/status/{checkoutSessionId})
+export type PaymentStatus = 'NONE' | 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'EXPIRED' | 'REQUIRES_RECONCILIATION';
+
+export interface PaymentStatusResponse {
+  checkoutSessionId: string;
+  paymentAttemptId: string | null;
+  status: PaymentStatus;
+  orderIds: string[];
+  // Payment URL for pending online payments (e.g. VNPay redirect); null otherwise. Not a fixed enum.
+  nextAction: string | null;
+  expiresAt: string;
+  reconciliationReason: string | null;
 }
 
 // Orders
-// Matches com.shopee.monolith.modules.order.model.OrderStatus, plus the FulfillmentStatus
-// values (READY_TO_SHIP/SHIPPED) some UI also renders as if they were an order status.
+// Matches com.shopee.monolith.modules.order.model.OrderStatus
 export type OrderStatus =
   | 'PENDING_PAYMENT'
   | 'PAID'
   | 'CONFIRMED'
-  | 'READY_TO_SHIP'
-  | 'SHIPPED'
   | 'FULFILLED'
   | 'DELIVERED'
   | 'COMPLETED'
   | 'CANCELLED';
 
+// Matches com.shopee.monolith.modules.order.model.OrderPaymentStatus
+export type OrderPaymentStatus = 'UNPAID' | 'PAID' | 'FAILED' | 'EXPIRED';
+
+// Matches com.shopee.monolith.modules.order.model.FulfillmentStatus (null until payment confirmed)
+export type FulfillmentStatus = 'READY_TO_SHIP' | 'SHIPPED' | 'DELIVERED';
+
+// Matches com.shopee.monolith.modules.order.dto.response.BuyerOrderSummaryResponse
+// (GET /api/buyer/orders row — deliberately lightweight, no item/cover preview)
 export interface OrderSummary {
   orderId: string;
-  checkoutSessionId: string;
-  shop: ShopSummary;
+  shopId: string;
+  shopName: string;
   status: OrderStatus;
-  paymentMethod: string;
-  paymentStatus: string;
-  grandTotal: number;
+  paymentStatus: OrderPaymentStatus;
+  totalAmount: number;
   itemCount: number;
-  coverItem: {
-    productName: string;
-    variantOptions: VariantOption[];
-    coverImageUrl: string | null;
-    quantity: number;
-    unitPrice: number;
-  };
+  coverProductName: string | null;
+  coverItemQuantity: number;
+  coverImageUrl: string | null;
   createdAt: string;
-  canCancel: boolean;
-  canReview: boolean;
 }
 
+// Matches com.shopee.monolith.modules.order.dto.response.BuyerOrderItemResponse
 export interface OrderItem {
-  orderItemId: string;
-  productId: string;
+  id: string;
   variantId: string;
   productName: string;
-  variantOptions: VariantOption[];
+  variantName: string;
   sku: string;
-  coverImageUrl: string | null;
+  price: number;
   quantity: number;
-  unitPrice: number;
   subtotal: number;
   reviewed: boolean;
 }
 
+// Matches com.shopee.monolith.modules.order.dto.response.BuyerOrderTimelineEvent
 export interface OrderTimeline {
-  status: OrderStatus;
-  timestamp: string;
-  label: string;
+  event: string;
+  occurredAt: string;
 }
 
+// Matches com.shopee.monolith.modules.order.dto.response.BuyerOrderDetailResponse
 export interface OrderDetail {
   orderId: string;
   checkoutSessionId: string;
+  shopId: string;
+  shopName: string;
   status: OrderStatus;
-  paymentMethod: string;
-  paymentStatus: string;
-  canCancel: boolean;
-  canReview: boolean;
-  shop: ShopSummary;
-  shippingAddress: Omit<Address, 'addressId' | 'isDefault'>;
+  paymentStatus: OrderPaymentStatus;
+  paymentMethod: string | null;
+  itemsSubtotal: number;
+  shippingFee: number;
+  totalAmount: number;
+  shippingRecipientName: string;
+  shippingPhone: string;
+  shippingAddressLine: string;
+  shippingWardName: string;
+  shippingDistrictName: string;
+  shippingProvinceName: string;
   items: OrderItem[];
-  breakdown: {
-    subtotal: number;
-    shippingFee: number;
-    grandTotal: number;
-  };
   timeline: OrderTimeline[];
-}
-
-// Seller order list item
-export interface SellerOrderSummary {
-  orderId: string;
-  status: OrderStatus;
-  buyer: { userId: string; fullName: string };
-  grandTotal: number;
   createdAt: string;
-  canShip: boolean;
-  canDeliver: boolean;
 }
 
-// Payment
-export type PaymentStatus = 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'EXPIRED' | 'REQUIRES_RECONCILIATION';
-export type NextAction = 'WAIT' | 'REDIRECT_TO_ORDER' | 'RETRY_PAYMENT' | 'CONTACT_SUPPORT';
 
-export interface PaymentStatusResponse {
-  checkoutSessionId: string;
-  paymentAttemptId: string;
-  status: PaymentStatus;
-  orderIds: string[];
-  nextAction: NextAction;
-  expiresAt: string;
-  reconciliationReason: string | null;
-}
 
 // Review
+// Matches com.shopee.monolith.modules.review.dto.response.ReviewResponse
 export interface Review {
-  reviewId: string;
+  id: string;
+  productId: string;
+  orderItemId: string;
+  buyerId: string;
   rating: number;
   comment: string | null;
-  reviewer: { userId: string; fullName: string; avatarUrl: string | null };
-  orderItemSnapshot: { variantOptions: VariantOption[] };
   createdAt: string;
+  updatedAt: string;
 }
 
-export interface ReviewSummary {
-  averageRating: number;
-  totalReviews: number;
-  distribution: Record<string, number>;
+// Matches com.shopee.monolith.modules.review.dto.response.ProductReviewListResponse
+// (GET /api/products/{productId}/reviews response shape, not a plain Page<Review>)
+export interface ProductReviewListResponse {
+  ratingAvg: number;
+  ratingCount: number;
+  reviews: { items: Review[]; page: number; size: number; totalElements: number; totalPages: number; last: boolean };
 }
 
 // Notification
+// Matches com.shopee.monolith.modules.notification.dto.response.NotificationResponse
 export interface Notification {
-  notificationId: string;
-  type: string;
+  id: string;
+  type: 'ORDER_CONFIRMED' | 'ORDER_SHIPPED' | 'ORDER_DELIVERED' | 'REVIEW_REMINDER';
   title: string;
   body: string;
-  read: boolean;
-  metadata: Record<string, string>;
+  refType: string | null;
+  refId: string | null;
+  readAt: string | null;
   createdAt: string;
 }
 
 // Chat
+// Matches com.shopee.monolith.modules.chat.dto.response.ChatRoomResponse
 export interface ChatRoom {
-  roomId: string;
-  shop: ShopSummary;
-  lastMessage: {
-    content: string;
-    senderType: 'BUYER' | 'SELLER';
-    sentAt: string;
-  } | null;
+  id: string;
+  buyerId: string;
+  shopId: string;
+  shopName: string;
+  buyerLastReadAt: string | null;
+  sellerLastReadAt: string | null;
+  lastMessageContent: string | null;
+  lastMessageSenderId: string | null;
+  lastMessageAt: string | null;
   unreadCount: number;
   createdAt: string;
 }
 
+// Matches com.shopee.monolith.modules.chat.dto.response.ChatMessageResponse
 export interface ChatMessage {
-  messageId: string;
+  id: string;
   roomId: string;
   senderId: string;
-  senderType: 'BUYER' | 'SELLER';
   content: string;
-  sentAt: string;
-  read: boolean;
+  createdAt: string;
 }
 
 // AI recommendation chat
@@ -386,16 +412,16 @@ export interface ChatRecommendResponse {
 }
 
 // Seller
+// Matches com.shopee.monolith.modules.product.dto.response.ProductDetailResponse
 export interface SellerProduct {
-  productId: string;
+  id: string;
   name: string;
   status: string;
-  coverImageUrl: string | null;
-  priceMin: number;
-  priceMax: number;
-  variantCount: number;
-  totalStock: number;
-  soldCount: number;
+  media: { mediaId: string; publicUrl: string; cover: boolean }[];
+  minPrice: number;
+  maxPrice: number;
+  variants: unknown[];
+  totalAvailableStock: number;
   updatedAt: string;
 }
 
@@ -403,9 +429,9 @@ export interface SellerProduct {
 export interface SellerOrderSummary {
   orderId: string;
   status: OrderStatus;
-  paymentStatus: string;
+  paymentStatus: OrderPaymentStatus;
   paymentMethod: string;
-  fulfillmentStatus: string | null;
+  fulfillmentStatus: FulfillmentStatus | null;
   totalAmount: number;
   itemCount: number;
   shippingRecipientName: string;

@@ -15,9 +15,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
-import { ProductDetail, ProductVariant, Review, ReviewSummary } from '@/types/api';
-import { pageFrom, PagedResponse } from '@/lib/page';
-import { cn, formatPrice, formatRelative } from '@/lib/utils';
+import { ProductDetail, ProductVariant, ProductReviewListResponse } from '@/types/api';
+import { pageFrom } from '@/lib/page';
+import { cn, formatPrice, formatRelative, getStockStatus } from '@/lib/utils';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -46,19 +46,19 @@ export default function ProductDetailPage({
   const { data: reviewsData } = useQuery({
     queryKey: ['product-reviews', productId],
     queryFn: async () => {
-      const { data } = await api.get<{ data: PagedResponse<Review> & { summary: ReviewSummary } }>(
+      const { data } = await api.get<{ data: ProductReviewListResponse }>(
         `/api/products/${productId}/reviews?page=0&size=10`
       );
-      return { ...pageFrom(data.data), summary: data.data.summary };
+      return { ...pageFrom(data.data.reviews), ratingAvg: data.data.ratingAvg, ratingCount: data.data.ratingCount };
     },
     enabled: !!product,
   });
 
-  // Build option groups từ variants
+  // Build option groups từ variants (optionLabels là map name -> value cho mỗi variant)
   const optionGroups = product
     ? Object.entries(
         product.variants.reduce<Record<string, Set<string>>>((acc, v) => {
-          v.options.forEach(({ name, value }) => {
+          Object.entries(v.optionLabels).forEach(([name, value]) => {
             if (!acc[name]) acc[name] = new Set();
             acc[name].add(value);
           });
@@ -72,7 +72,7 @@ export default function ProductDetailPage({
     if (!product) return null;
     return (
       product.variants.find((v) =>
-        v.options.every((o) => opts[o.name] === o.value)
+        Object.entries(v.optionLabels).every(([name, value]) => opts[name] === value)
       ) ?? null
     );
   }
@@ -101,7 +101,7 @@ export default function ProductDetailPage({
       toast.error('Vui lòng chọn phiên bản sản phẩm');
       return;
     }
-    const variantId = selectedVariant?.variantId ?? product?.variants[0]?.variantId;
+    const variantId = selectedVariant?.id ?? product?.variants[0]?.id;
     if (!variantId) return;
 
     try {
@@ -121,7 +121,7 @@ export default function ProductDetailPage({
     if (!user) { router.push('/login'); return; }
     if (!product) return;
     try {
-      const { data } = await api.post('/api/chat/rooms', { shopId: product.shop.shopId });
+      const { data } = await api.post('/api/chat/rooms', { shopId: product.shop.id });
       router.push(`/chat?roomId=${data.data.roomId}`);
     } catch {
       toast.error('Không thể mở chat');
@@ -138,12 +138,12 @@ export default function ProductDetailPage({
   const currentVariant = selectedVariant ?? (product.variants.length === 1 ? product.variants[0] : null);
   const displayPrice = currentVariant
     ? formatPrice(currentVariant.price)
-    : product.priceMin === product.priceMax
-      ? formatPrice(product.priceMin)
-      : `${formatPrice(product.priceMin)} – ${formatPrice(product.priceMax)}`;
+    : product.minPrice === product.maxPrice
+      ? formatPrice(product.minPrice)
+      : `${formatPrice(product.minPrice)} – ${formatPrice(product.maxPrice)}`;
 
-  const stockStatus = currentVariant?.stockStatus;
-  const canBuy = currentVariant ? currentVariant.checkoutEligible : product.checkoutEligible;
+  const stockStatus = currentVariant ? getStockStatus(currentVariant.availableStock) : undefined;
+  const canBuy = currentVariant ? currentVariant.checkoutEligible : product.eligibilityIssues.length === 0;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
@@ -166,7 +166,7 @@ export default function ProductDetailPage({
           <div className="relative aspect-square rounded-2xl overflow-hidden bg-white/3 border border-white/8 group">
             {product.media.length > 0 ? (
               <Image
-                src={product.media[activeImage]?.url ?? product.media[0].url}
+                src={product.media[activeImage]?.publicUrl ?? product.media[0].publicUrl}
                 alt={product.name}
                 fill
                 sizes="(max-width: 1024px) 100vw, 50vw"
@@ -199,7 +199,7 @@ export default function ProductDetailPage({
                       : 'border-white/10 hover:border-white/30'
                   )}
                 >
-                  <Image src={m.url} alt="" fill sizes="64px" className="object-cover" />
+                  <Image src={m.publicUrl} alt="" fill sizes="64px" className="object-cover" />
                 </button>
               ))}
             </div>
@@ -217,18 +217,15 @@ export default function ProductDetailPage({
             )}
             <h1 className="text-xl font-bold text-foreground leading-snug">{product.name}</h1>
 
-            <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
-              {product.rating != null && (
+            {reviewsData && reviewsData.ratingCount > 0 && (
+              <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                  <span className="font-medium text-foreground">{product.rating.toFixed(1)}</span>
-                  <span>({reviewsData?.summary?.totalReviews ?? 0} đánh giá)</span>
+                  <span className="font-medium text-foreground">{reviewsData.ratingAvg.toFixed(1)}</span>
+                  <span>({reviewsData.ratingCount} đánh giá)</span>
                 </div>
-              )}
-              {product.soldCount > 0 && (
-                <span>Đã bán {product.soldCount.toLocaleString('vi-VN')}</span>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Price */}
@@ -355,22 +352,12 @@ export default function ProductDetailPage({
           <div className="flex items-center justify-between rounded-xl border border-white/8 bg-white/2 p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
-                {product.shop.logoUrl ? (
-                  <Image
-                    src={product.shop.logoUrl}
-                    alt={product.shop.shopName}
-                    width={40}
-                    height={40}
-                    className="rounded-full object-cover"
-                  />
-                ) : (
-                  <Store className="h-5 w-5 text-primary" />
-                )}
+                <Store className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-medium">{product.shop.shopName}</p>
+                <p className="text-sm font-medium">{product.shop.name}</p>
                 <Link
-                  href={`/shops/${product.shop.shopId}`}
+                  href={`/shops/${product.shop.id}`}
                   className="text-xs text-primary hover:text-primary/80 transition-colors"
                 >
                   Xem shop
@@ -397,9 +384,9 @@ export default function ProductDetailPage({
             Mô tả sản phẩm
           </TabsTrigger>
           <TabsTrigger value="reviews" className="data-[state=active]:bg-white/10">
-            Đánh giá ({reviewsData?.summary?.totalReviews ?? 0})
+            Đánh giá ({reviewsData?.ratingCount ?? 0})
           </TabsTrigger>
-          {product.attributes.length > 0 && (
+          {Object.keys(product.attributes).length > 0 && (
             <TabsTrigger value="specs" className="data-[state=active]:bg-white/10">
               Thông số
             </TabsTrigger>
@@ -417,11 +404,11 @@ export default function ProductDetailPage({
         <TabsContent value="reviews" className="mt-4">
           <div className="rounded-xl border border-white/8 bg-card p-6 space-y-6">
             {/* Summary */}
-            {reviewsData?.summary && (
+            {reviewsData && reviewsData.ratingCount > 0 && (
               <div className="flex items-center gap-8 pb-6 border-b border-white/8">
                 <div className="text-center">
                   <p className="text-4xl font-bold text-primary">
-                    {reviewsData.summary.averageRating.toFixed(1)}
+                    {reviewsData.ratingAvg.toFixed(1)}
                   </p>
                   <div className="flex gap-0.5 mt-1 justify-center">
                     {Array.from({ length: 5 }).map((_, i) => (
@@ -429,7 +416,7 @@ export default function ProductDetailPage({
                         key={i}
                         className={cn(
                           'h-4 w-4',
-                          i < Math.round(reviewsData.summary.averageRating)
+                          i < Math.round(reviewsData.ratingAvg)
                             ? 'fill-amber-400 text-amber-400'
                             : 'text-white/20'
                         )}
@@ -437,29 +424,8 @@ export default function ProductDetailPage({
                     ))}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {reviewsData.summary.totalReviews} đánh giá
+                    {reviewsData.ratingCount} đánh giá
                   </p>
-                </div>
-                <div className="flex-1 space-y-1.5">
-                  {[5, 4, 3, 2, 1].map((star) => {
-                    const count = reviewsData.summary.distribution[String(star)] ?? 0;
-                    const pct = reviewsData.summary.totalReviews > 0
-                      ? (count / reviewsData.summary.totalReviews) * 100
-                      : 0;
-                    return (
-                      <div key={star} className="flex items-center gap-2 text-xs">
-                        <span className="w-4 text-right text-muted-foreground">{star}</span>
-                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                        <div className="flex-1 h-1.5 bg-white/8 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-amber-400 rounded-full transition-all"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        <span className="w-6 text-muted-foreground">{count}</span>
-                      </div>
-                    );
-                  })}
                 </div>
               </div>
             )}
@@ -472,14 +438,14 @@ export default function ProductDetailPage({
             ) : (
               <div className="space-y-5">
                 {reviewsData?.content.map((review) => (
-                  <div key={review.reviewId} className="space-y-2">
+                  <div key={review.id} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary">
-                          {review.reviewer.fullName.charAt(0).toUpperCase()}
+                          <Store className="h-3.5 w-3.5" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium">{review.reviewer.fullName}</p>
+                          <p className="text-sm font-medium">Khách hàng</p>
                           <div className="flex gap-0.5">
                             {Array.from({ length: 5 }).map((_, i) => (
                               <Star
@@ -499,11 +465,6 @@ export default function ProductDetailPage({
                         {formatRelative(review.createdAt)}
                       </span>
                     </div>
-                    {review.orderItemSnapshot.variantOptions.length > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        Phân loại: {review.orderItemSnapshot.variantOptions.map((o) => o.value).join(', ')}
-                      </p>
-                    )}
                     {review.comment && (
                       <p className="text-sm text-foreground/80 leading-relaxed">{review.comment}</p>
                     )}
@@ -517,14 +478,14 @@ export default function ProductDetailPage({
           </div>
         </TabsContent>
 
-        {product.attributes.length > 0 && (
+        {Object.keys(product.attributes).length > 0 && (
           <TabsContent value="specs" className="mt-4">
             <div className="rounded-xl border border-white/8 bg-card p-6">
               <div className="divide-y divide-white/6">
-                {product.attributes.map((attr) => (
-                  <div key={attr.name} className="flex py-3 text-sm">
-                    <span className="w-40 shrink-0 text-muted-foreground">{attr.name}</span>
-                    <span className="text-foreground">{attr.value}</span>
+                {Object.entries(product.attributes).map(([name, value]) => (
+                  <div key={name} className="flex py-3 text-sm">
+                    <span className="w-40 shrink-0 text-muted-foreground">{name}</span>
+                    <span className="text-foreground">{String(value)}</span>
                   </div>
                 ))}
               </div>

@@ -112,21 +112,21 @@ export default function EditProductPage({ params }: { params: Promise<{ productI
         <h2 className="text-sm font-semibold text-foreground mb-3">Phiên bản & tồn kho</h2>
         <div className="space-y-3">
           {product.variants.map((v) => (
-            <div key={v.variantId} className="flex items-center gap-3 rounded-lg border border-white/8 p-3">
+            <div key={v.id} className="flex items-center gap-3 rounded-lg border border-white/8 p-3">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">{v.options.map((o) => o.value).join(', ') || v.sku}</p>
+                <p className="text-sm font-medium">{Object.values(v.optionLabels).join(', ') || v.sku}</p>
                 <p className="text-xs text-muted-foreground">{v.sku} · {formatPrice(v.price)} · Còn {v.availableStock}</p>
               </div>
               <Input
                 inputMode="numeric"
                 placeholder={String(v.availableStock)}
-                value={stocks[v.variantId] ?? ''}
-                onChange={(e) => setStocks((s) => ({ ...s, [v.variantId]: e.target.value }))}
+                value={stocks[v.id] ?? ''}
+                onChange={(e) => setStocks((s) => ({ ...s, [v.id]: e.target.value }))}
                 className="w-24 h-8 bg-white/5 border-white/10 text-sm"
               />
               <Button size="sm" variant="outline" className="border-white/10 text-xs"
-                disabled={updateStock.isPending || stocks[v.variantId] === undefined || stocks[v.variantId] === ''}
-                onClick={() => updateStock.mutate({ variantId: v.variantId, quantity: Number(stocks[v.variantId]) })}>
+                disabled={updateStock.isPending || stocks[v.id] === undefined || stocks[v.id] === ''}
+                onClick={() => updateStock.mutate({ variantId: v.id, quantity: Number(stocks[v.id]) })}>
                 Cập nhật
               </Button>
             </div>

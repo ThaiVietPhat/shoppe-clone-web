@@ -109,7 +109,7 @@ export default function HomePage() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
             {recommendData.content.slice(0, 5).map((product: ProductCardResponse) => (
-              <ProductCard key={product.productId} product={product} />
+              <ProductCard key={product.id} product={product} />
             ))}
           </div>
         </section>
@@ -132,7 +132,7 @@ export default function HomePage() {
           {productsLoading
             ? Array.from({ length: 10 }).map((_, i) => <ProductCardSkeleton key={i} />)
             : productsData?.content.map((product) => (
-                <ProductCard key={product.productId} product={product} />
+                <ProductCard key={product.id} product={product} />
               ))}
         </div>
       </section>

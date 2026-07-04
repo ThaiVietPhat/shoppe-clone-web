@@ -38,7 +38,7 @@ export default function CategoryPage({ params }: { params: Promise<{ categoryId:
       ) : (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {data.content.map((p) => <ProductCard key={p.productId} product={p} />)}
+            {data.content.map((p) => <ProductCard key={p.id} product={p} />)}
           </div>
           <Pagination className="mt-8" page={data.page} totalPages={data.totalPages} onPageChange={setPage} />
         </>
