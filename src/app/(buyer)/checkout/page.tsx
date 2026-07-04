@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { MapPin, Plus, Loader2, CreditCard, Banknote, AlertCircle, Check } from 'lucide-react';
+import { MapPin, Plus, Loader2, CreditCard, Banknote, AlertCircle, Check, Pencil, Trash2, Star } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Address, CheckoutPreview, CheckoutResponse, PaymentStatusResponse } from '@/types/api';
 import { Button } from '@/components/ui/button';
@@ -39,16 +39,39 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'VNPAY' | 'COD'>('COD');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingAddress, setEditingAddress] = useState<Address | null>(null);
+  const [deletingAddressId, setDeletingAddressId] = useState<string | null>(null);
 
   const { data: addresses, isLoading: addrLoading } = useQuery({
     queryKey: ['addresses'],
     queryFn: async () => {
-      const { data } = await api.get<{ data: Address[] }>('/api/users/me/addresses');
+      const { data } = await api.get<{ data: Address[] }>('/api/addresses');
       const list = data.data;
       const def = list.find((a) => a.isDefault) ?? list[0];
       if (def && !selectedAddressId) setSelectedAddressId(def.id);
       return list;
     },
+  });
+
+  const invalidateAddresses = () => qc.invalidateQueries({ queryKey: ['addresses'] });
+
+  const deleteAddress = useMutation({
+    mutationFn: (addressId: string) => api.delete(`/api/addresses/${addressId}`),
+    onSuccess: () => {
+      toast.success('Đã xoá địa chỉ');
+      invalidateAddresses();
+      setDeletingAddressId(null);
+    },
+    onError: () => toast.error('Không thể xoá địa chỉ'),
+  });
+
+  const setDefaultAddress = useMutation({
+    mutationFn: (addressId: string) => api.patch(`/api/addresses/${addressId}/default`),
+    onSuccess: () => {
+      toast.success('Đã đặt làm địa chỉ mặc định');
+      invalidateAddresses();
+    },
+    onError: () => toast.error('Không thể đặt làm mặc định'),
   });
 
   const { data: preview, isFetching: previewLoading } = useQuery({
@@ -114,32 +137,50 @@ export default function CheckoutPage() {
           ) : (
             <div className="space-y-2">
               {addresses.map((a) => (
-                <button
+                <div
                   key={a.id}
-                  onClick={() => setSelectedAddressId(a.id)}
                   className={cn(
-                    'flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors',
+                    'flex w-full items-start gap-3 rounded-lg border p-3 transition-colors',
                     selectedAddressId === a.id
                       ? 'border-primary bg-primary/5'
                       : 'border-white/10 hover:border-white/20'
                   )}
                 >
-                  <div className={cn(
-                    'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border',
-                    selectedAddressId === a.id ? 'border-primary bg-primary' : 'border-white/30'
-                  )}>
-                    {selectedAddressId === a.id && <Check className="h-3 w-3 text-primary-foreground" />}
+                  <button onClick={() => setSelectedAddressId(a.id)} className="flex flex-1 items-start gap-3 text-left min-w-0">
+                    <div className={cn(
+                      'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border',
+                      selectedAddressId === a.id ? 'border-primary bg-primary' : 'border-white/30'
+                    )}>
+                      {selectedAddressId === a.id && <Check className="h-3 w-3 text-primary-foreground" />}
+                    </div>
+                    <div className="text-sm min-w-0">
+                      <p className="font-medium text-foreground">
+                        {a.recipientName} <span className="text-muted-foreground font-normal">· {a.phone}</span>
+                        {a.isDefault && <span className="ml-2 text-xs text-primary">[Mặc định]</span>}
+                      </p>
+                      <p className="text-muted-foreground mt-0.5">
+                        {a.addressLine}, {a.wardName}, {a.districtName}, {a.provinceName}
+                      </p>
+                    </div>
+                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {!a.isDefault && (
+                      <button title="Đặt làm mặc định" disabled={setDefaultAddress.isPending}
+                        onClick={() => setDefaultAddress.mutate(a.id)}
+                        className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-white/5 transition-colors">
+                        <Star className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                    <button title="Sửa địa chỉ" onClick={() => setEditingAddress(a)}
+                      className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button title="Xoá địa chỉ" onClick={() => setDeletingAddressId(a.id)}
+                      className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-white/5 transition-colors">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                  <div className="text-sm">
-                    <p className="font-medium text-foreground">
-                      {a.recipientName} <span className="text-muted-foreground font-normal">· {a.phone}</span>
-                      {a.isDefault && <span className="ml-2 text-xs text-primary">[Mặc định]</span>}
-                    </p>
-                    <p className="text-muted-foreground mt-0.5">
-                      {a.addressLine}, {a.wardName}, {a.districtName}, {a.provinceName}
-                    </p>
-                  </div>
-                </button>
+                </div>
               ))}
             </div>
           )}
@@ -248,24 +289,61 @@ export default function CheckoutPage() {
       <AddressDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        onCreated={(addr) => {
-          qc.invalidateQueries({ queryKey: ['addresses'] });
+        onSaved={(addr) => {
+          invalidateAddresses();
           setSelectedAddressId(addr.id);
         }}
       />
+
+      {editingAddress && (
+        <AddressDialog
+          open
+          initial={editingAddress}
+          onOpenChange={(v) => !v && setEditingAddress(null)}
+          onSaved={() => {
+            invalidateAddresses();
+            setEditingAddress(null);
+          }}
+        />
+      )}
+
+      <Dialog open={!!deletingAddressId} onOpenChange={(v) => !v && setDeletingAddressId(null)}>
+        <DialogContent className="bg-card border-white/10">
+          <DialogHeader><DialogTitle>Xoá địa chỉ</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Bạn có chắc chắn muốn xoá địa chỉ này?</p>
+          <DialogFooter>
+            <Button variant="outline" className="border-white/10" onClick={() => setDeletingAddressId(null)}>Đóng</Button>
+            <Button variant="outline" className="border-destructive/30 text-destructive hover:bg-destructive/10"
+              disabled={deleteAddress.isPending} onClick={() => deletingAddressId && deleteAddress.mutate(deletingAddressId)}>
+              {deleteAddress.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Xoá'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
 function AddressDialog({
-  open, onOpenChange, onCreated,
+  open, initial, onOpenChange, onSaved,
 }: {
   open: boolean;
+  initial?: Address;
   onOpenChange: (v: boolean) => void;
-  onCreated: (addr: Address) => void;
+  onSaved: (addr: Address) => void;
 }) {
+  const isEdit = !!initial;
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<AddressForm>({
     resolver: zodResolver(addressSchema),
+    defaultValues: initial ? {
+      recipientName: initial.recipientName,
+      phone: initial.phone,
+      addressLine: initial.addressLine,
+      wardName: initial.wardName,
+      districtName: initial.districtName,
+      provinceName: initial.provinceName,
+      isDefault: initial.isDefault,
+    } : undefined,
   });
 
   async function onSubmit(values: AddressForm) {
@@ -273,25 +351,28 @@ function AddressDialog({
       // Backend requires GHN-compatible ward/district/province codes alongside display names.
       // There is no location-picker/GHN reference data wired up yet, so the entered name is
       // reused as the code — this satisfies validation but is not a real GHN code lookup.
-      const { data } = await api.post<{ data: Address }>('/api/users/me/addresses', {
+      const body = {
         ...values,
         wardCode: values.wardName,
         districtCode: values.districtName,
         provinceCode: values.provinceName,
-      });
-      toast.success('Đã thêm địa chỉ');
-      onCreated(data.data);
+      };
+      const { data } = isEdit
+        ? await api.put<{ data: Address }>(`/api/addresses/${initial.id}`, body)
+        : await api.post<{ data: Address }>('/api/addresses', body);
+      toast.success(isEdit ? 'Đã cập nhật địa chỉ' : 'Đã thêm địa chỉ');
+      onSaved(data.data);
       reset();
       onOpenChange(false);
     } catch {
-      toast.error('Không thể thêm địa chỉ');
+      toast.error(isEdit ? 'Không thể cập nhật địa chỉ' : 'Không thể thêm địa chỉ');
     }
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-card border-white/10">
-        <DialogHeader><DialogTitle>Thêm địa chỉ giao hàng</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{isEdit ? 'Sửa địa chỉ giao hàng' : 'Thêm địa chỉ giao hàng'}</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <Field label="Người nhận" error={errors.recipientName?.message}>

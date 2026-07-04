@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useState } from 'react';
+import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ClipboardList, Truck, PackageCheck, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -75,14 +76,14 @@ function SellerOrdersContent() {
           <div className="space-y-3">
             {data.content.map((o) => (
               <div key={o.orderId} className="flex items-center justify-between gap-4 rounded-xl border border-white/8 bg-card p-4">
-                <div>
+                <Link href={`/seller/orders/${o.orderId}`} className="min-w-0 hover:opacity-90 transition-opacity">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">#{o.orderId.slice(0, 8)}</span>
                     <Badge className={cn('text-[11px] border', ORDER_STATUS_CLASS[o.status])}>{ORDER_STATUS_LABEL[o.status]}</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">{o.shippingRecipientName} · {formatDateTime(o.createdAt)}</p>
                   <p className="text-sm font-bold text-primary mt-1">{formatPrice(o.totalAmount)}</p>
-                </div>
+                </Link>
                 <div className="flex items-center gap-2 shrink-0">
                   {canShipOrder(o.paymentStatus, o.fulfillmentStatus) && (
                     <Button size="sm" className="bg-primary gap-1.5 text-xs" onClick={() => setShipOrder(o.orderId)}>

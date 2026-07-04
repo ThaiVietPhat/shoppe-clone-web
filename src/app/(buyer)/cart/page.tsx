@@ -1,22 +1,26 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ShoppingCart, Trash2, Minus, Plus, Store } from 'lucide-react';
+import { ShoppingCart, Trash2, Minus, Plus, Store, Loader2 } from 'lucide-react';
 import { useCart, useCartMutations } from '@/hooks/use-cart';
 import { CartItem } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
 import { formatPrice, cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export default function CartPage() {
   const router = useRouter();
   const { data: cart, isLoading } = useCart();
-  const { updateQuantity, removeItem, selectItems, selectAll } = useCartMutations();
+  const { updateQuantity, removeItem, selectItems, selectAll, clearCart } = useCartMutations();
+  const [clearOpen, setClearOpen] = useState(false);
 
   const items = useMemo(() => cart?.items ?? [], [cart]);
   const selectedItems = items.filter((i) => i.selected);
@@ -75,16 +79,39 @@ export default function CartPage() {
     <div className="mx-auto max-w-5xl px-4 py-6">
       <div className="flex items-center justify-between mb-5">
         <h1 className="text-lg font-semibold text-foreground">Giỏ hàng ({items.length})</h1>
-        <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-          <input
-            type="checkbox"
-            checked={allSelected}
-            onChange={(e) => selectAll.mutate(e.target.checked)}
-            className="h-4 w-4 accent-primary"
-          />
-          Chọn tất cả
-        </label>
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={(e) => selectAll.mutate(e.target.checked)}
+              className="h-4 w-4 accent-primary"
+            />
+            Chọn tất cả
+          </label>
+          <button
+            onClick={() => setClearOpen(true)}
+            className="text-sm text-muted-foreground hover:text-destructive transition-colors"
+          >
+            Xoá giỏ hàng
+          </button>
+        </div>
       </div>
+
+      <Dialog open={clearOpen} onOpenChange={setClearOpen}>
+        <DialogContent className="bg-card border-white/10">
+          <DialogHeader><DialogTitle>Xoá giỏ hàng</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Toàn bộ sản phẩm trong giỏ hàng sẽ bị xoá. Bạn có chắc chắn không?</p>
+          <DialogFooter>
+            <Button variant="outline" className="border-white/10" onClick={() => setClearOpen(false)}>Đóng</Button>
+            <Button variant="outline" className="border-destructive/30 text-destructive hover:bg-destructive/10"
+              disabled={clearCart.isPending}
+              onClick={() => clearCart.mutate(undefined, { onSuccess: () => setClearOpen(false) })}>
+              {clearCart.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Xoá tất cả'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid lg:grid-cols-[1fr_320px] gap-6 items-start">
         <div className="space-y-4">

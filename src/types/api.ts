@@ -411,6 +411,28 @@ export interface ChatRecommendResponse {
   generatedText: string | null;
 }
 
+// Inventory
+// Matches com.shopee.monolith.modules.inventory.dto.response.InventoryResponse
+export interface Inventory {
+  id: string;
+  variantId: string;
+  availableStock: number;
+  reservedStock: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Matches com.shopee.monolith.modules.inventory.dto.response.InventoryMovementResponse
+export interface InventoryMovement {
+  id: string;
+  variantId: string;
+  movementType: 'INITIAL' | 'STOCK_UPDATE' | 'RESERVE' | 'CONFIRM' | 'RELEASE';
+  quantity: number;
+  availableStockAfter: number;
+  reservedStockAfter: number;
+  createdAt: string;
+}
+
 // Seller
 // Matches com.shopee.monolith.modules.product.dto.response.ProductDetailResponse
 export interface SellerProduct {
@@ -436,6 +458,28 @@ export interface SellerOrderSummary {
   itemCount: number;
   shippingRecipientName: string;
   createdAt: string;
+}
+
+// Matches com.shopee.monolith.modules.order.dto.response.SellerOrderDetailResponse
+export interface SellerOrderDetail {
+  orderId: string;
+  checkoutSessionId: string;
+  status: OrderStatus;
+  paymentStatus: OrderPaymentStatus;
+  paymentMethod: string | null;
+  fulfillmentStatus: FulfillmentStatus | null;
+  itemsSubtotal: number;
+  shippingFee: number;
+  totalAmount: number;
+  shippingRecipientName: string;
+  shippingPhone: string;
+  shippingAddressLine: string;
+  shippingWardName: string;
+  shippingDistrictName: string;
+  shippingProvinceName: string;
+  items: OrderItem[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Matches com.shopee.monolith.modules.order.dto.response.SellerDashboardResponse

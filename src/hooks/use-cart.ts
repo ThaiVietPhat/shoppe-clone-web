@@ -42,15 +42,23 @@ export function useCartMutations() {
 
   const selectItems = useMutation({
     mutationFn: (vars: { variantIds: string[]; selected: boolean }) =>
-      api.post('/api/cart/items/select', vars),
+      api.post(`/api/cart/items/${vars.selected ? 'select' : 'deselect'}`, { variantIds: vars.variantIds }),
     onSuccess: invalidate,
   });
 
   const selectAll = useMutation({
-    mutationFn: (selected: boolean) =>
-      api.post('/api/cart/items/select-all', { selected }),
+    mutationFn: (selected: boolean) => {
+      const variantIds = qc.getQueryData<Cart>(['cart'])?.items.map((i) => i.variantId) ?? [];
+      if (variantIds.length === 0) return Promise.resolve(null);
+      return api.post(`/api/cart/items/${selected ? 'select' : 'deselect'}`, { variantIds });
+    },
     onSuccess: invalidate,
   });
 
-  return { addItem, updateQuantity, removeItem, selectItems, selectAll };
+  const clearCart = useMutation({
+    mutationFn: () => api.delete('/api/cart'),
+    onSuccess: invalidate,
+  });
+
+  return { addItem, updateQuantity, removeItem, selectItems, selectAll, clearCart };
 }
