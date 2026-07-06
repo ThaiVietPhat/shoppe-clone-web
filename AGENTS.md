@@ -1,5 +1,7 @@
 # AGENTS.md — Shopee Clone Frontend
 
+> ⚠️ **File này là bản fork cũ của `CLAUDE.md`, không được cập nhật song song.** Các phần API field/endpoint ở đây (đặc biệt mục Chat — `roomId`, `senderType`, object `shop`/`lastMessage` lồng) đã lỗi thời và từng gây bug thật (xem `CLAUDE.md` mục Chat + `docs/frontend/09-chat.md` để biết chi tiết field thật đã đối chiếu với backend). **Luôn ưu tiên đọc `CLAUDE.md` ở root — coi file này là tham khảo cấu trúc project, không phải nguồn field/endpoint đáng tin.**
+
 ## Project Overview
 
 Shopee clone frontend — Next.js app phục vụ 3 loại user: **Buyer**, **Seller**, **Admin** trong cùng một codebase. Backend là Spring Boot modular monolith chạy tại `http://localhost:8080` (local) hoặc Railway (prod). Frontend deploy trên Vercel.

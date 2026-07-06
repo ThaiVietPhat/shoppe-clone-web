@@ -1,7 +1,9 @@
 # 09 — Chat (REST + STOMP Realtime)
 
+> Bản này đã được đối chiếu lại trực tiếp với `ChatController`/`ChatRoomResponse`/`ChatMessageResponse` thật trong backend. Bản cũ trước đây dùng field tưởng tượng (`roomId`, `messageId`, `senderType`, `read`, object `shop: {...}` lồng, `lastMessage: {...}` lồng) và khiến FE từng có 2 bug thật: điều hướng `/chat?roomId=undefined` (đọc field `roomId` không tồn tại thay vì `id`) và danh sách phòng chat luôn trống (gọi `pageFrom()` cho response thực ra là mảng phẳng, không phân trang).
+
 Chat có 2 layer:
-- **REST** — lấy lịch sử phòng/tin nhắn, gửi tin nhắn (không realtime)
+- **REST** — tạo/lấy danh sách phòng, lấy lịch sử tin nhắn, gửi tin nhắn (không realtime)
 - **STOMP/WebSocket** — nhận tin nhắn realtime
 
 ---
@@ -20,25 +22,29 @@ X-XSRF-TOKEN: <csrf>
 }
 ```
 
-Nếu đã có phòng với seller này → trả phòng cũ (idempotent).
+Idempotent — nếu buyer đã có phòng với shop này thì trả về phòng cũ (không tạo trùng).
 
-Response:
+Response (`ChatRoomResponse`):
 ```json
 {
   "code": 200,
   "data": {
-    "roomId": "uuid",
-    "shop": {
-      "shopId": "uuid",
-      "shopName": "Tech Store VN",
-      "logoUrl": "https://..."
-    },
-    "lastMessage": null,
+    "id": "uuid",
+    "buyerId": "uuid",
+    "shopId": "uuid",
+    "shopName": "Tech Store VN",
+    "buyerLastReadAt": "2025-06-20T09:00:00Z",
+    "sellerLastReadAt": null,
+    "lastMessageContent": null,
+    "lastMessageSenderId": null,
+    "lastMessageAt": null,
     "unreadCount": 0,
     "createdAt": "2025-06-20T08:00:00Z"
   }
 }
 ```
+
+Field khoá chính là **`id`**, không phải `roomId`. `shopName`/`shopId` là field phẳng, không có object lồng `shop: {...}`.
 
 ### Danh sách phòng chat
 
@@ -47,71 +53,71 @@ GET /api/chat/rooms?page=0&size=20
 Authorization: Bearer <token>
 ```
 
-Response:
+⚠️ **`page`/`size` không có tác dụng** — `ChatController.listRooms` không nhận `Pageable`, Spring âm thầm bỏ qua 2 param này. `data` là **mảng phẳng**, không phải `{items, page, size, totalElements, ...}`:
+
 ```json
 {
   "code": 200,
-  "data": {
-    "items": [
-      {
-        "roomId": "uuid",
-        "shop": {
-          "shopId": "uuid",
-          "shopName": "Tech Store VN",
-          "logoUrl": "https://..."
-        },
-        "lastMessage": {
-          "content": "Cho hỏi laptop còn hàng không?",
-          "senderType": "BUYER",
-          "sentAt": "2025-06-20T09:00:00Z"
-        },
-        "unreadCount": 2
-      }
-    ]
-  }
+  "data": [
+    {
+      "id": "uuid",
+      "buyerId": "uuid",
+      "shopId": "uuid",
+      "shopName": "Tech Store VN",
+      "buyerLastReadAt": "2025-06-20T09:00:00Z",
+      "sellerLastReadAt": "2025-06-20T09:04:00Z",
+      "lastMessageContent": "Cho hỏi laptop còn hàng không?",
+      "lastMessageSenderId": "uuid",
+      "lastMessageAt": "2025-06-20T09:00:00Z",
+      "unreadCount": 2,
+      "createdAt": "2025-06-19T10:00:00Z"
+    }
+  ]
 }
 ```
 
-### Lịch sử tin nhắn
+FE đọc thẳng `data.data` như `ChatRoom[]` — **đừng gọi `pageFrom(data.data)`** cho endpoint này, vì mảng không có field `.items` nên `content` sẽ luôn rỗng dù backend trả đủ dữ liệu.
+
+### Lịch sử tin nhắn — endpoint này MỚI thật sự phân trang
 
 ```http
 GET /api/chat/rooms/{roomId}/messages?page=0&size=50
 Authorization: Bearer <token>
 ```
 
-Response (tin nhắn từ mới → cũ, page 0 = tin nhắn mới nhất):
+Response (`PagedResponse<ChatMessageResponse>` thật — dùng `pageFrom()` bình thường cho endpoint này):
 ```json
 {
   "code": 200,
   "data": {
     "items": [
       {
-        "messageId": "uuid",
+        "id": "uuid",
         "roomId": "uuid",
         "senderId": "uuid",
-        "senderType": "BUYER",
         "content": "Cho hỏi laptop còn hàng không?",
-        "sentAt": "2025-06-20T09:00:00Z",
-        "read": true
+        "createdAt": "2025-06-20T09:00:00Z"
       },
       {
-        "messageId": "uuid",
+        "id": "uuid",
         "roomId": "uuid",
         "senderId": "uuid",
-        "senderType": "SELLER",
         "content": "Dạ còn hàng ạ, anh muốn đặt không?",
-        "sentAt": "2025-06-20T09:05:00Z",
-        "read": false
+        "createdAt": "2025-06-20T09:05:00Z"
       }
     ],
     "page": 0,
+    "size": 50,
     "totalElements": 25,
-    "totalPages": 1
+    "totalPages": 1,
+    "last": true
   }
 }
 ```
 
-**Hiển thị:** Reverse order — render từ cũ đến mới (flip `content` array).
+`ChatMessageResponse` field thật: `{ id, roomId, senderId, content, createdAt }`. **Không có `senderType`** — xác định "tin của mình" bằng so sánh `senderId === user.id`.
+
+**Hiển thị:** mảng trả về mới → cũ. Reverse trước khi render (cũ → mới, tin mới nhất ở dưới cùng).
 
 ### Gửi tin nhắn qua REST
 
@@ -125,7 +131,7 @@ X-XSRF-TOKEN: <csrf>
 }
 ```
 
-Response: message object như trên.
+Response: `ChatMessageResponse` như trên.
 
 > Dùng REST để gửi. STOMP chỉ dùng để nhận realtime.
 
@@ -136,6 +142,8 @@ POST /api/chat/rooms/{roomId}/read
 Authorization: Bearer <token>
 X-XSRF-TOKEN: <csrf>
 ```
+
+Response: `ChatRoomResponse` đã cập nhật (`buyerLastReadAt`/`sellerLastReadAt` mới). Nhớ `invalidateQueries({queryKey:['chat-rooms']})` sau khi gọi để badge `unreadCount` ở danh sách phòng cập nhật ngay.
 
 ---
 
@@ -155,33 +163,23 @@ import { Client } from '@stomp/stompjs';
 let stompClient: Client | null = null;
 
 function connectChat(roomId: string, onMessage: (msg: ChatMessage) => void) {
-  const accessToken = getAccessToken();
-
   stompClient = new Client({
     brokerURL: `${WS_BASE_URL}/ws`,
     // BẮT BUỘC: gửi access token qua CONNECT header
     connectHeaders: {
-      Authorization: `Bearer ${accessToken}`,
+      Authorization: `Bearer ${getAccessToken()}`,
     },
     reconnectDelay: 5000,
 
     onConnect: () => {
-      // Subscribe phòng chat
-      stompClient!.subscribe(
-        `/topic/chat/rooms/${roomId}`,
-        (frame) => {
-          const message: ChatMessage = JSON.parse(frame.body);
-          onMessage(message);
-        }
-      );
+      stompClient!.subscribe(`/topic/chat/rooms/${roomId}`, (frame) => {
+        const message: ChatMessage = JSON.parse(frame.body); // shape = ChatMessageResponse
+        onMessage(message);
+      });
     },
 
     onStompError: (frame) => {
       console.error('STOMP error:', frame);
-    },
-
-    onDisconnect: () => {
-      console.log('Disconnected from chat');
     },
   });
 
@@ -196,7 +194,8 @@ function disconnectChat() {
 
 **Lưu ý quan trọng:**
 - `brokerURL` dùng `ws://` (local) hoặc `wss://` (production), không phải `http://`
-- Access token phải gửi trong `connectHeaders` — không phải cookie hay URL param
+- Access token gửi trong `connectHeaders`, không phải cookie hay URL param
+- Room membership được backend enforce cho cả REST, SUBSCRIBE, và SEND — subscribe nhầm room không thuộc về mình sẽ bị từ chối
 - Mỗi lần vào trang chat → `activate()`, rời trang → `deactivate()`
 
 ### Gửi tin nhắn qua STOMP
@@ -207,13 +206,11 @@ Không dùng STOMP để gửi — dùng REST POST thay thế. STOMP chỉ nhậ
 
 ```ts
 interface ChatMessage {
-  messageId: string;
+  id: string;
   roomId: string;
   senderId: string;
-  senderType: 'BUYER' | 'SELLER';
   content: string;
-  sentAt: string; // ISO 8601
-  read: boolean;
+  createdAt: string; // ISO 8601
 }
 ```
 
@@ -228,72 +225,49 @@ stompClient = new Client({
   brokerURL: `${WS_BASE_URL}/ws`,
 
   // Gọi mỗi khi cần reconnect — lấy token mới
-  beforeConnect: async () => {
-    // Refresh token nếu cần
-    const token = await getOrRefreshAccessToken();
+  beforeConnect: () => {
     stompClient!.connectHeaders = {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${getAccessToken() ?? ''}`,
     };
   },
 
   reconnectDelay: 5000,
-  // ...
 });
 ```
 
 ---
 
-## React component pattern
+## React Query pattern thật (khớp code hiện tại)
 
 ```tsx
-function ChatRoom({ roomId }: { roomId: string }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState('');
+const qc = useQueryClient();
 
-  // Load lịch sử
-  useEffect(() => {
-    api.get(`/api/chat/rooms/${roomId}/messages`)
-      .then(({ data }) => {
-        setMessages([...data.data.content].reverse()); // cũ → mới
-      });
-  }, [roomId]);
+// Danh sách phòng — KHÔNG dùng pageFrom, response là mảng phẳng
+const { data: rooms } = useQuery({
+  queryKey: ['chat-rooms'],
+  queryFn: async () => {
+    const { data } = await api.get<{ data: ChatRoom[] }>('/api/chat/rooms?page=0&size=20');
+    return data.data;
+  },
+});
 
-  // STOMP realtime
-  useEffect(() => {
-    connectChat(roomId, (newMsg) => {
-      setMessages(prev => [...prev, newMsg]);
-      // Đánh dấu đã đọc nếu không phải tin của mình
-      if (newMsg.senderId !== currentUserId) {
-        api.post(`/api/chat/rooms/${roomId}/read`);
-      }
-    });
-
-    return () => disconnectChat();
-  }, [roomId]);
-
-  async function sendMessage() {
-    if (!input.trim()) return;
-    const { data } = await api.post(`/api/chat/rooms/${roomId}/messages`, {
-      content: input,
-    });
-    setMessages(prev => [...prev, data.data]);
-    setInput('');
-  }
-
-  return (
-    <div>
-      <div className="messages">
-        {messages.map(msg => (
-          <div key={msg.messageId} className={msg.senderType === 'BUYER' ? 'sent' : 'received'}>
-            {msg.content}
-          </div>
-        ))}
-      </div>
-      <input value={input} onChange={e => setInput(e.target.value)} />
-      <button onClick={sendMessage}>Gửi</button>
-    </div>
-  );
+// Tạo phòng rồi điều hướng — dùng data.data.id, invalidate cache rooms
+async function handleChat(shopId: string) {
+  const { data } = await api.post('/api/chat/rooms', { shopId });
+  qc.invalidateQueries({ queryKey: ['chat-rooms'] });
+  router.push(`/chat?roomId=${data.data.id}`); // ĐÚNG: .id, KHÔNG phải .roomId
 }
+
+// Lịch sử tin nhắn — CÓ phân trang, dùng pageFrom bình thường
+const { data: history } = useQuery({
+  queryKey: ['chat-messages', roomId],
+  queryFn: async () => {
+    const { data } = await api.get<{ data: PagedResponse<ChatMessage> }>(
+      `/api/chat/rooms/${roomId}/messages?page=0&size=50`
+    );
+    return [...pageFrom(data.data).content].reverse(); // mới→cũ trả về, reverse thành cũ→mới
+  },
+});
 ```
 
 ---
@@ -301,12 +275,11 @@ function ChatRoom({ roomId }: { roomId: string }) {
 ## WS_BASE_URL config
 
 ```ts
-// Local
-const WS_BASE_URL = 'ws://localhost:8080';
+// .env.local
+NEXT_PUBLIC_WS_BASE_URL=ws://localhost:8080
 
-// Production
-const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL;
-// env: VITE_WS_BASE_URL=wss://your-backend.railway.app
+// Production (Vercel)
+NEXT_PUBLIC_WS_BASE_URL=wss://your-backend.railway.app
 ```
 
 ---
@@ -320,5 +293,8 @@ const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL;
 - [ ] Subscribe chỉ đúng roomId user đang xem
 - [ ] Deactivate khi unmount component (cleanup)
 - [ ] Handle reconnect với token mới khi token hết hạn
-- [ ] Load lịch sử qua REST, reverse array trước khi render
-- [ ] Đánh dấu đọc khi vào phòng và khi nhận tin nhắn mới
+- [ ] Danh sách phòng (`GET /api/chat/rooms`) đọc thẳng như mảng, KHÔNG `pageFrom()`
+- [ ] Lịch sử tin nhắn (`GET .../messages`) CÓ phân trang, dùng `pageFrom()` rồi reverse
+- [ ] Dùng field `id` của phòng/tin nhắn, không phải `roomId`/`messageId`
+- [ ] Xác định "tin của mình" bằng `senderId === user.id`, không có field `senderType`
+- [ ] Invalidate `['chat-rooms']` sau khi tạo phòng mới hoặc đánh dấu đã đọc
