@@ -33,7 +33,11 @@ api.interceptors.response.use(
   (res) => res,
   async (err) => {
     const original = err.config;
-    if (err.response?.status === 401 && !original._retry) {
+    // Chỉ auto-refresh/redirect khi request gốc có Bearer token (tức user tưởng đã đăng nhập).
+    // Nếu không có token, 401 nghĩa là "chưa đăng nhập" (vd bootstrap silent-refresh của khách
+    // ẩn danh) — không phải phiên hết hạn, nên không được ép redirect sang /login.
+    const hadAuthHeader = Boolean(original?.headers?.Authorization);
+    if (err.response?.status === 401 && hadAuthHeader && !original._retry) {
       original._retry = true;
 
       if (isRefreshing) {

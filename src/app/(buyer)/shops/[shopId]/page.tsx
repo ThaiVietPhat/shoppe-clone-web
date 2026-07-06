@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import { Store, Star, Package, MessageCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -21,6 +21,7 @@ export default function ShopPage({ params }: { params: Promise<{ shopId: string 
   const { shopId } = use(params);
   const router = useRouter();
   const { user } = useAuthStore();
+  const qc = useQueryClient();
   const [page, setPage] = useState(0);
 
   const { data: shop, isLoading: shopLoading } = useQuery({
@@ -45,7 +46,8 @@ export default function ShopPage({ params }: { params: Promise<{ shopId: string 
     if (!user) { router.push('/login'); return; }
     try {
       const { data } = await api.post('/api/chat/rooms', { shopId });
-      router.push(`/chat?roomId=${data.data.roomId}`);
+      qc.invalidateQueries({ queryKey: ['chat-rooms'] });
+      router.push(`/chat?roomId=${data.data.id}`);
     } catch {
       toast.error('Không thể mở chat');
     }

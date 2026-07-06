@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
+import { useCartMutations } from '@/hooks/use-cart';
 import { ProductDetail, ProductVariant, ProductReviewListResponse } from '@/types/api';
 import { pageFrom } from '@/lib/page';
 import { cn, formatPrice, formatRelative, getStockStatus } from '@/lib/utils';
@@ -29,6 +30,7 @@ export default function ProductDetailPage({
   const { productId } = use(params);
   const router = useRouter();
   const { user } = useAuthStore();
+  const qc = useQueryClient();
 
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
@@ -90,6 +92,7 @@ export default function ProductDetailPage({
   }
 
   const maxQty = selectedVariant?.availableStock ?? 99;
+  const { addItem } = useCartMutations();
 
   async function handleAddToCart() {
     if (!user) {
@@ -97,7 +100,7 @@ export default function ProductDetailPage({
       router.push('/login');
       return;
     }
-    if (optionGroups.length > 0 && !selectedVariant) {
+    if ((product?.variants.length ?? 0) > 1 && !selectedVariant) {
       toast.error('Vui lòng chọn phiên bản sản phẩm');
       return;
     }
@@ -105,7 +108,7 @@ export default function ProductDetailPage({
     if (!variantId) return;
 
     try {
-      await api.post('/api/cart/items', { variantId, quantity });
+      await addItem.mutateAsync({ variantId, quantity });
       toast.success('Đã thêm vào giỏ hàng');
     } catch {
       toast.error('Không thể thêm vào giỏ hàng');
@@ -122,7 +125,8 @@ export default function ProductDetailPage({
     if (!product) return;
     try {
       const { data } = await api.post('/api/chat/rooms', { shopId: product.shop.id });
-      router.push(`/chat?roomId=${data.data.roomId}`);
+      qc.invalidateQueries({ queryKey: ['chat-rooms'] });
+      router.push(`/chat?roomId=${data.data.id}`);
     } catch {
       toast.error('Không thể mở chat');
     }
@@ -278,6 +282,34 @@ export default function ProductDetailPage({
               </div>
             </div>
           ))}
+
+          {/* Fallback selector — variants without distinguishing optionLabels (e.g. differ only by name) */}
+          {optionGroups.length === 0 && product.variants.length > 1 && (
+            <div>
+              <p className="text-sm font-medium text-foreground mb-2">Phiên bản</p>
+              <div className="flex flex-wrap gap-2">
+                {product.variants.map((v) => (
+                  <button
+                    key={v.id}
+                    disabled={!v.checkoutEligible}
+                    onClick={() => {
+                      setSelectedVariant(v);
+                      setQuantity(1);
+                    }}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg border text-sm transition-all',
+                      selectedVariant?.id === v.id
+                        ? 'border-primary bg-primary/10 text-primary font-medium'
+                        : 'border-white/10 text-muted-foreground hover:border-white/30 hover:text-foreground',
+                      !v.checkoutEligible && 'opacity-40 cursor-not-allowed line-through'
+                    )}
+                  >
+                    {v.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Quantity */}
           <div>

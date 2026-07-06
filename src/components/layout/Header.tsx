@@ -1,8 +1,9 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   Search,
   ShoppingCart,
@@ -27,25 +28,27 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuthStore } from '@/stores/auth.store';
+import { useCart } from '@/hooks/use-cart';
 import { api } from '@/lib/api';
+import { formatPrice } from '@/lib/utils';
 import { toast } from 'sonner';
+
+const CART_PREVIEW_LIMIT = 5;
 
 export function Header() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [cartCount, setCartCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [cartPreviewOpen, setCartPreviewOpen] = useState(false);
 
-  useEffect(() => {
-    if (!user) return;
-    api.get('/api/cart')
-      .then(({ data }) => {
-        const items = data.data?.items ?? [];
-        setCartCount(items.reduce((sum: number, item: { quantity: number }) => sum + item.quantity, 0));
-      })
-      .catch(() => {});
-  }, [user]);
+  const { data: cart } = useCart();
+  const cartItems = useMemo(() => cart?.items ?? [], [cart]);
+  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const recentCartItems = useMemo(
+    () => cartItems.slice(-CART_PREVIEW_LIMIT).reverse(),
+    [cartItems],
+  );
 
   useEffect(() => {
     if (!user) return;
@@ -128,19 +131,82 @@ export function Header() {
                 </Button>
 
                 {/* Cart */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="relative text-muted-foreground hover:text-foreground"
-                  onClick={() => router.push('/cart')}
+                <div
+                  className="relative"
+                  onMouseEnter={() => setCartPreviewOpen(true)}
+                  onMouseLeave={() => setCartPreviewOpen(false)}
                 >
-                  <ShoppingCart className="h-5 w-5" />
-                  {cartCount > 0 && (
-                    <Badge className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px] bg-primary text-primary-foreground border-0">
-                      {cartCount > 99 ? '99+' : cartCount}
-                    </Badge>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative text-muted-foreground hover:text-foreground"
+                    onClick={() => router.push('/cart')}
+                  >
+                    <ShoppingCart className="h-5 w-5" />
+                    {cartCount > 0 && (
+                      <Badge className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px] bg-primary text-primary-foreground border-0">
+                        {cartCount > 99 ? '99+' : cartCount}
+                      </Badge>
+                    )}
+                  </Button>
+
+                  {cartPreviewOpen && (
+                    <div className="absolute right-0 top-full w-80 pt-2 z-50">
+                      <div className="rounded-lg border border-white/10 bg-card shadow-lg overflow-hidden">
+                        {recentCartItems.length === 0 ? (
+                          <div className="p-6 text-center text-sm text-muted-foreground">
+                            Giỏ hàng trống
+                          </div>
+                        ) : (
+                          <>
+                            <div className="px-4 py-2.5 text-xs font-medium text-muted-foreground border-b border-white/8">
+                              Sản phẩm mới thêm
+                            </div>
+                            <div className="max-h-80 overflow-y-auto divide-y divide-white/6">
+                              {recentCartItems.map((item) => (
+                                <Link
+                                  key={item.variantId}
+                                  href={`/products/${item.productId}`}
+                                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors"
+                                >
+                                  <div className="relative h-10 w-10 shrink-0 rounded-md overflow-hidden bg-white/5">
+                                    {item.coverImageUrl ? (
+                                      <Image
+                                        src={item.coverImageUrl}
+                                        alt={item.productName}
+                                        fill
+                                        sizes="40px"
+                                        className="object-cover"
+                                      />
+                                    ) : (
+                                      <div className="flex h-full items-center justify-center text-muted-foreground/30">
+                                        <ShoppingCart className="h-4 w-4" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-medium line-clamp-1">{item.productName}</p>
+                                    <p className="text-xs font-bold text-primary mt-0.5">{formatPrice(item.price)}</p>
+                                  </div>
+                                  <span className="text-xs text-muted-foreground shrink-0">x{item.quantity}</span>
+                                </Link>
+                              ))}
+                            </div>
+                            <div className="p-2 border-t border-white/8">
+                              <Button
+                                size="sm"
+                                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                                onClick={() => router.push('/cart')}
+                              >
+                                Xem giỏ hàng
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   )}
-                </Button>
+                </div>
 
                 {/* User menu */}
                 <DropdownMenu>

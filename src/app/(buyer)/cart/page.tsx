@@ -46,7 +46,7 @@ export default function CartPage() {
     }
     const ineligible = selectedItems.find((i) => !i.checkoutEligible);
     if (ineligible) {
-      toast.error(`"${ineligible.productName}" hiện không thể mua`);
+      toast.error(`"${ineligible.productName || 'Sản phẩm này'}" hiện không thể mua`);
       return;
     }
     router.push('/checkout');
@@ -154,7 +154,7 @@ export default function CartPage() {
                       <Link href={`/products/${item.productId}`} className="text-sm font-medium line-clamp-1 hover:text-primary transition-colors">
                         {item.productName}
                       </Link>
-                      {Object.keys(item.optionLabels).length > 0 && (
+                      {Object.keys(item.optionLabels ?? {}).length > 0 && (
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {Object.values(item.optionLabels).join(', ')}
                         </p>

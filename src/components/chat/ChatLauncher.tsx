@@ -37,8 +37,8 @@ export function ChatLauncher() {
   const { data: rooms, isLoading: roomsLoading } = useQuery({
     queryKey: ['chat-rooms'],
     queryFn: async () => {
-      const { data } = await api.get<{ data: PagedResponse<ChatRoom> }>('/api/chat/rooms?page=0&size=20');
-      return pageFrom(data.data).content;
+      const { data } = await api.get<{ data: ChatRoom[] }>('/api/chat/rooms?page=0&size=20');
+      return data.data;
     },
     enabled: isHydrated && !!user,
   });

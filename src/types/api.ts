@@ -142,21 +142,11 @@ export interface ShopDetail {
 }
 
 // Search
-export interface PriceRange {
-  label: string;
-  min: number;
-  max: number;
-  count: number;
-}
-
-export interface SearchFacets {
-  brands: string[];
-  priceRanges: PriceRange[];
-}
-
+// Matches com.shopee.monolith.modules.search.dto.response.SearchResponse
+// (products is nested, no facets — backend does not compute brand/price-range buckets)
 export interface SearchResult extends Page<ProductCardResponse> {
   degraded: boolean;
-  facets?: SearchFacets;
+  degradedReason: string | null;
 }
 
 // Cart
@@ -402,6 +392,15 @@ export interface ChatMessage {
 export interface RecommendedProductResponse {
   product: ProductCardResponse;
   reasonCodes: string[];
+}
+
+// Matches com.shopee.monolith.modules.recommendation.dto.response.RecommendationResponse
+// (GET /api/recommendations/home — not paginated, no page/size/totalElements)
+export interface RecommendationResponse {
+  items: RecommendedProductResponse[];
+  degraded: boolean;
+  degradedReason: string | null;
+  generatedText: string | null;
 }
 
 export interface ChatRecommendResponse {

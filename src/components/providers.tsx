@@ -4,15 +4,32 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@/lib/queryClient';
 import { Toaster } from '@/components/ui/sonner';
 import { useEffect } from 'react';
-import { api } from '@/lib/api';
+import { api, setAccessToken } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
+import { toStoreUser } from '@/lib/user';
+import { CurrentUserResponse } from '@/types/api';
 
 function CsrfInit() {
   const setHydrated = useAuthStore((s) => s.setHydrated);
+  const setUser = useAuthStore((s) => s.setUser);
 
   useEffect(() => {
-    api.get('/api/auth/csrf').catch(() => {}).finally(() => setHydrated());
-  }, [setHydrated]);
+    async function bootstrap() {
+      await api.get('/api/auth/csrf').catch(() => {});
+      // Access token chỉ sống trong memory nên mất sau mỗi lần reload —
+      // thử refresh im lặng bằng HttpOnly cookie để khôi phục phiên đăng nhập.
+      try {
+        const { data } = await api.post<{ data: { accessToken: string } }>('/api/auth/refresh');
+        setAccessToken(data.data.accessToken);
+        const { data: me } = await api.get<{ data: CurrentUserResponse }>('/api/users/me');
+        setUser(toStoreUser(me.data));
+      } catch {
+        setAccessToken(null);
+      }
+      setHydrated();
+    }
+    bootstrap();
+  }, [setHydrated, setUser]);
 
   return null;
 }

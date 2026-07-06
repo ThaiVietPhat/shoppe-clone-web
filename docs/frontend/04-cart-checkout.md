@@ -1,5 +1,7 @@
 # 04 — Cart, Checkout Preview, Place Order
 
+> Đối chiếu lại với Swagger sống (xem `CLAUDE.md`). Bản trước có nhiều field/endpoint không tồn tại (`variantOptions`, `stockStatus`, `/api/users/me/addresses`, `select-all`, `paymentMethod` trong response `/api/orders`) — đã sửa toàn bộ.
+
 ---
 
 ## Cart
@@ -13,149 +15,137 @@ GET /api/cart
 Authorization: Bearer <token>
 ```
 
-Response:
+Response (`CartResponse`):
 ```json
 {
   "code": 200,
   "data": {
     "version": 12,
+    "totalItems": 1,
     "items": [
       {
         "variantId": "uuid",
         "productId": "uuid",
-        "productName": "Laptop Gaming ASUS TUF",
-        "variantOptions": [
-          { "name": "RAM", "value": "16GB" },
-          { "name": "Storage", "value": "512GB SSD" }
-        ],
-        "sku": "ASUS-TUF-16-512",
-        "price": 25000000,
-        "coverImage": { "mediaId": "uuid", "url": "https://...", "contentType": "image/jpeg" },
         "shopId": "uuid",
         "shopName": "Tech Store VN",
-        "quantity": 2,
-        "selected": true,
-        "stockStatus": "IN_STOCK",
+        "productName": "Laptop Gaming ASUS TUF",
+        "variantName": "16GB / 512GB SSD",
+        "optionLabels": { "RAM": "16GB", "Storage": "512GB SSD" },
+        "sku": "ASUS-TUF-16-512",
+        "price": 25000000,
+        "coverImageUrl": "https://...",
         "availableStock": 5,
-        "checkoutEligible": true
+        "checkoutEligible": true,
+        "quantity": 2,
+        "selected": true
       }
     ]
   }
 }
 ```
 
+**Không có** `variantOptions` (mảng), `coverImage` (object), `stockStatus` — dùng đúng field phẳng ở trên. Backend đã enrich đủ productName/variantName/optionLabels/coverImageUrl/availableStock/checkoutEligible cho từng item, FE không cần tự ghép từ product API khác.
+
 ### Thêm item vào giỏ
 
 ```http
 POST /api/cart/items
-Authorization: Bearer <token>
-X-XSRF-TOKEN: <csrf>
-
-{
-  "variantId": "uuid",
-  "quantity": 1
-}
+{ "variantId": "uuid", "quantity": 1 }
 ```
 
-Nếu variant đã có trong giỏ → cộng thêm quantity. Không replace.
-
-Response `200`: `{ "code": 200, "data": null }`
+Cộng dồn quantity nếu variant đã có trong giỏ, không replace.
 
 ### Cập nhật số lượng
 
 ```http
 PUT /api/cart/items/{variantId}
-Authorization: Bearer <token>
-X-XSRF-TOKEN: <csrf>
-
 { "quantity": 3 }
 ```
 
-Nếu `quantity = 0` → xóa item khỏi giỏ.
+`quantity = 0` → xóa item khỏi giỏ.
 
 ### Xóa item khỏi giỏ
 
 ```http
 DELETE /api/cart/items/{variantId}
-Authorization: Bearer <token>
-X-XSRF-TOKEN: <csrf>
 ```
 
-### Chọn / bỏ chọn item để checkout
+### Xoá sạch giỏ hàng
+
+```http
+DELETE /api/cart
+```
+
+### Chọn / bỏ chọn item để checkout — **2 endpoint riêng biệt, KHÔNG có cờ boolean**
 
 ```http
 POST /api/cart/items/select
-Authorization: Bearer <token>
-X-XSRF-TOKEN: <csrf>
+{ "variantIds": ["uuid1", "uuid2"] }
 
-{
-  "variantIds": ["uuid1", "uuid2"],
-  "selected": true
-}
+POST /api/cart/items/deselect
+{ "variantIds": ["uuid1", "uuid2"] }
 ```
 
-- `selected: true` → chọn các items này
-- `selected: false` → bỏ chọn
+Request body `CartSelectRequest` chỉ có `variantIds` — **không có field `selected`**. Muốn chọn thì gọi `/select`, muốn bỏ chọn thì gọi `/deselect` — gọi nhầm `/select` cho cả hai trường hợp (như code cũ từng làm) khiến việc bỏ chọn không có tác dụng gì.
 
-**Quan trọng:** Backend checkout chỉ dùng **selected items** — không bao giờ checkout toàn bộ giỏ nếu chỉ chọn một phần. Frontend phải reflect trạng thái `selected` của từng item.
+**Không có endpoint `/api/cart/items/select-all`.** Muốn "chọn/bỏ chọn tất cả", FE tự lấy toàn bộ `variantId` đang có trong cart rồi gọi `/select` hoặc `/deselect` với danh sách đó (xem `hooks/use-cart.ts`).
 
-### Chọn/bỏ chọn tất cả
-
-```http
-POST /api/cart/items/select-all
-Authorization: Bearer <token>
-X-XSRF-TOKEN: <csrf>
-
-{ "selected": true }
-```
+**Quan trọng:** Backend checkout chỉ dùng **selected items** — không bao giờ checkout toàn bộ giỏ nếu chỉ chọn một phần.
 
 ---
 
 ## Địa chỉ giao hàng
 
-### Lấy danh sách địa chỉ
-
 ```http
-GET /api/users/me/addresses
-Authorization: Bearer <token>
+GET    /api/addresses
+POST   /api/addresses
+PUT    /api/addresses/{addressId}
+DELETE /api/addresses/{addressId}
+PATCH  /api/addresses/{addressId}/default
 ```
 
-Response:
+**KHÔNG phải** `/api/users/me/addresses` — route đó không tồn tại, gọi vào sẽ luôn 404.
+
+Response (`AddressResponse`):
 ```json
 {
-  "code": 200,
-  "data": [
-    {
-      "addressId": "uuid",
-      "recipientName": "Nguyen Van A",
-      "phone": "0901234567",
-      "street": "123 Nguyen Hue",
-      "ward": "Bến Nghé",
-      "district": "Quận 1",
-      "province": "TP. Hồ Chí Minh",
-      "isDefault": true
-    }
-  ]
+  "id": "uuid",
+  "userId": "uuid",
+  "recipientName": "Nguyen Van A",
+  "phone": "0901234567",
+  "addressLine": "123 Nguyen Hue",
+  "wardCode": "00263",
+  "wardName": "Bến Nghé",
+  "districtCode": "001",
+  "districtName": "Quận 1",
+  "provinceCode": "01",
+  "provinceName": "TP. Hồ Chí Minh",
+  "isDefault": true,
+  "createdAt": "...",
+  "updatedAt": "..."
 }
 ```
 
-### Thêm địa chỉ
+Field là `id` (không phải `addressId`), `addressLine` (không phải `street`), `wardName/districtName/provinceName` (không phải `ward/district/province`).
 
-```http
-POST /api/users/me/addresses
-Authorization: Bearer <token>
-X-XSRF-TOKEN: <csrf>
+### Request tạo/sửa địa chỉ (`AddressRequest`)
 
+```json
 {
   "recipientName": "Nguyen Van A",
   "phone": "0901234567",
-  "street": "123 Nguyen Hue",
-  "ward": "Bến Nghé",
-  "district": "Quận 1",
-  "province": "TP. Hồ Chí Minh",
+  "addressLine": "123 Nguyen Hue",
+  "wardCode": "00263",
+  "wardName": "Bến Nghé",
+  "districtCode": "001",
+  "districtName": "Quận 1",
+  "provinceCode": "01",
+  "provinceName": "TP. Hồ Chí Minh",
   "isDefault": true
 }
 ```
+
+**Cả 6 field code+name của ward/district/province đều bắt buộc** (không blank) — thiếu 1 field là backend trả 400. Hiện chưa có location-picker/GHN reference data thật để tra code chuẩn; FE tạm dùng chính tên nhập tay làm code (xem comment trong `checkout/page.tsx`). Đây là workaround, không phải hợp đồng backend — thay bằng bộ chọn tỉnh/huyện/xã thật khi có nguồn dữ liệu GHN.
 
 ---
 
@@ -165,137 +155,142 @@ Gọi trước khi đặt hàng để hiển thị breakdown giá và validate. 
 
 ```http
 POST /api/orders/preview
-Authorization: Bearer <token>
-X-XSRF-TOKEN: <csrf>
-
-{
-  "addressId": "uuid"
-}
+{ "addressId": "uuid" }
 ```
 
 Backend dùng các **selected items** trong cart hiện tại.
 
-Response:
+Response (`CheckoutPreviewResponse`):
 ```json
 {
   "code": 200,
   "data": {
-    "valid": true,
-    "groups": [
+    "shops": [
       {
         "shopId": "uuid",
         "shopName": "Tech Store VN",
         "items": [
           {
             "variantId": "uuid",
+            "productId": "uuid",
             "productName": "Laptop Gaming ASUS TUF",
-            "variantOptions": [{ "name": "RAM", "value": "16GB" }],
+            "variantName": "16GB / 512GB SSD",
+            "sku": "ASUS-TUF-16-512",
             "quantity": 2,
             "unitPrice": 25000000,
-            "subtotal": 50000000,
+            "itemTotal": 50000000,
             "valid": true,
-            "invalidReason": null
+            "invalidReasonCode": null
           }
         ],
-        "subtotal": 50000000,
-        "shippingFee": 30000
+        "itemsSubtotal": 50000000,
+        "shippingFee": 30000,
+        "shopTotal": 50030000
       }
     ],
-    "subtotal": 50000000,
+    "invalidItems": [],
+    "totalItemsSubtotal": 50000000,
     "totalShippingFee": 30000,
     "grandTotal": 50030000,
-    "invalidItems": []
+    "allItemsValid": true,
+    "addressId": "uuid",
+    "cartVersion": 12
   }
 }
 ```
 
-Khi có item không hợp lệ (`valid: false`):
-```json
-{
-  "valid": false,
-  "invalidItems": [
-    {
-      "variantId": "uuid",
-      "productName": "...",
-      "invalidReason": "INSUFFICIENT_STOCK",
-      "availableStock": 1,
-      "requestedQuantity": 3
-    }
-  ]
-}
-```
+Field đổi tên so với bản mô tả cũ:
+- `groups` → **`shops`**
+- `valid` (cấp response) → **`allItemsValid`**
+- `variantOptions` (mảng) → **`variantName`** (string)
+- `subtotal` (item) → **`itemTotal`**
+- `subtotal` (per shop) → **`itemsSubtotal`**, có thêm `shopTotal`
+- `subtotal` (tổng) → **`totalItemsSubtotal`**
+- `invalidReason` → **`invalidReasonCode`**
 
-`invalidReason` values và message hiển thị cho user:
+`invalidItems[]` dùng đúng shape `CheckoutPreviewItemResult` như item trong `shops[].items[]` ở trên (có `variantId`, `productName`, `invalidReasonCode`...) — không phải shape riêng với `availableStock`/`requestedQuantity`.
+
+`invalidReasonCode` chỉ có **3 giá trị thật**:
 | Code | Message gợi ý |
 |---|---|
 | `PRODUCT_INACTIVE` | Sản phẩm không còn bán |
 | `VARIANT_INACTIVE` | Phiên bản sản phẩm không còn bán |
-| `PRICE_CHANGED` | Giá đã thay đổi, vui lòng kiểm tra lại |
-| `INSUFFICIENT_STOCK` | Không đủ hàng (còn {availableStock}) |
-| `ADDRESS_INVALID` | Địa chỉ giao hàng không hợp lệ |
+| `INSUFFICIENT_STOCK` | Không đủ hàng |
 
-Khi `valid: false` → disable nút "Đặt hàng" và hiển thị lý do theo từng item.
+**Không có** `PRICE_CHANGED` hay `ADDRESS_INVALID` — backend chưa phát hiện 2 trường hợp này qua preview.
+
+Khi `allItemsValid: false` → disable nút "Đặt hàng" và hiển thị lý do theo từng item.
 
 ---
 
-## Place Order (tạo đơn hàng)
+## Place Order (tạo đơn hàng) — **2 bước tách rời, không gộp**
 
-Sau khi preview OK, gọi place order. Bắt buộc gửi `Idempotency-Key`.
+### Bước 1 — tạo order, CHƯA khởi tạo thanh toán
 
 ```http
 POST /api/orders
-Authorization: Bearer <token>
-X-XSRF-TOKEN: <csrf>
 Idempotency-Key: <uuid-v4>  ← TẠO MỘT LẦN, GIỮ LẠI ĐỂ RETRY
 
-{
-  "addressId": "uuid",
-  "paymentMethod": "VNPAY"  // hoặc "COD"
-}
+{ "addressId": "uuid" }
 ```
 
-**Quan trọng về Idempotency-Key:**
-- Tạo UUID ngay khi user bấm "Đặt hàng"
-- Nếu request timeout/lỗi mạng → retry với **cùng key**
-- Không tạo key mới khi retry — sẽ tạo đơn trùng
-
-```ts
-// Lưu key vào state component, không regenerate khi retry
-const [idempotencyKey] = useState(() => uuidv4());
-
-async function placeOrder() {
-  const { data } = await api.post('/api/orders', payload, {
-    headers: { 'Idempotency-Key': idempotencyKey }
-  });
-  // redirect tới trang thanh toán
-}
-```
-
-Response `200`:
+**Request KHÔNG có `paymentMethod`.** Response (`CheckoutResponse`) **KHÔNG có `paymentUrl` hay `paymentMethod`**:
 ```json
 {
   "code": 200,
   "data": {
     "checkoutSessionId": "uuid",
     "orderIds": ["uuid-order-1", "uuid-order-2"],
-    "paymentMethod": "VNPAY",
-    "grandTotal": 50030000,
-    "expiresAt": "2025-06-20T10:15:00Z",
-    "paymentUrl": "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?..."
+    "status": "PENDING_PAYMENT",
+    "itemsSubtotal": 50000000,
+    "shippingFee": 30000,
+    "totalAmount": 50030000,
+    "expiresAt": "2026-06-20T10:15:00Z"
   }
 }
 ```
 
-**Sau khi nhận response:**
-- `COD`: không có `paymentUrl`, redirect tới trang xác nhận đơn hàng
-- `VNPAY`: redirect browser tới `paymentUrl`
+Đây là điểm gây nhầm lẫn lớn nhất trong toàn bộ tài liệu cũ: đặt hàng **không tự động khởi tạo thanh toán**. Response chỉ tạo order ở trạng thái `PENDING_PAYMENT` và trả về `checkoutSessionId`.
+
+### Bước 2 — khởi tạo thanh toán (bắt buộc gọi tiếp)
+
+```http
+POST /api/payments/initiate
+{ "checkoutSessionId": "uuid", "method": "VNPAY" }   // hoặc "COD" — field tên là `method`, không phải `paymentMethod`
+```
+
+Response (`PaymentStatusResponse`):
+```json
+{
+  "checkoutSessionId": "uuid",
+  "paymentAttemptId": "uuid",
+  "status": "PENDING",
+  "orderIds": ["uuid-order-1", "uuid-order-2"],
+  "nextAction": "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?...",
+  "expiresAt": "2026-06-20T10:15:00Z",
+  "reconciliationReason": null
+}
+```
+
+`nextAction` là **URL string** cần redirect tới (VNPAY), hoặc `null` (COD — đã settle ngay, không cần redirect).
 
 ```ts
-if (data.data.paymentMethod === 'VNPAY') {
-  window.location.href = data.data.paymentUrl;
-} else {
-  // COD
-  router.push(`/orders/${data.data.orderIds[0]}`);
+const [idempotencyKey] = useState(() => uuidv4()); // tạo 1 lần, giữ để retry
+
+async function placeOrder() {
+  const { data: checkoutRes } = await api.post('/api/orders',
+    { addressId }, { headers: { 'Idempotency-Key': idempotencyKey } });
+
+  const { data: paymentRes } = await api.post('/api/payments/initiate', {
+    checkoutSessionId: checkoutRes.data.checkoutSessionId,
+    method: paymentMethod, // 'VNPAY' | 'COD'
+  });
+
+  if (paymentRes.data.nextAction) {
+    window.location.href = paymentRes.data.nextAction;
+  } else {
+    router.push(`/orders/${checkoutRes.data.orderIds[0]}`);
+  }
 }
 ```
 

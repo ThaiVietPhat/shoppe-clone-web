@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { ProductCard } from '@/components/product/ProductCard';
 import { ProductCardSkeleton } from '@/components/product/ProductCardSkeleton';
-import { ProductCardResponse, CategoryNode } from '@/types/api';
+import { ProductCardResponse, CategoryNode, RecommendationResponse } from '@/types/api';
 import { pageFrom, PagedResponse } from '@/lib/page';
 import Link from 'next/link';
 import { ChevronRight, Zap, TrendingUp, Sparkles } from 'lucide-react';
@@ -33,8 +33,8 @@ export default function HomePage() {
   const { data: recommendData } = useQuery({
     queryKey: ['home-recommendations'],
     queryFn: async () => {
-      const { data } = await api.get<{ data: PagedResponse<ProductCardResponse> }>('/api/recommendations/home?page=0&size=8');
-      return pageFrom(data.data);
+      const { data } = await api.get<{ data: RecommendationResponse }>('/api/recommendations/home?page=0&size=8');
+      return data.data;
     },
   });
 
@@ -98,7 +98,7 @@ export default function HomePage() {
       )}
 
       {/* AI Recommendations */}
-      {recommendData?.content && recommendData.content.length > 0 && (
+      {recommendData?.items && recommendData.items.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
@@ -108,8 +108,8 @@ export default function HomePage() {
             </h2>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {recommendData.content.slice(0, 5).map((product: ProductCardResponse) => (
-              <ProductCard key={product.id} product={product} />
+            {recommendData.items.slice(0, 5).map((r) => (
+              <ProductCard key={r.product.id} product={r.product} />
             ))}
           </div>
         </section>

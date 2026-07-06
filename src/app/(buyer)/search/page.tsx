@@ -5,11 +5,12 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Search as SearchIcon, SlidersHorizontal, AlertTriangle, Sparkles } from 'lucide-react';
 import { api } from '@/lib/api';
-import { SearchResult, ProductCardResponse, SearchFacets } from '@/types/api';
+import { SearchResult, ProductCardResponse } from '@/types/api';
 import { pageFrom, PagedResponse } from '@/lib/page';
 
-type RawSearch = PagedResponse<ProductCardResponse> & { degraded?: boolean; facets?: SearchFacets };
-const toSearchResult = (d: RawSearch): SearchResult => ({ ...pageFrom(d), degraded: d.degraded ?? false, facets: d.facets });
+// Backend SearchResponse nests the page under `products`, not flat at the top level.
+type RawSearch = { products: PagedResponse<ProductCardResponse>; degraded: boolean; degradedReason: string | null };
+const toSearchResult = (d: RawSearch): SearchResult => ({ ...pageFrom(d.products), degraded: d.degraded, degradedReason: d.degradedReason });
 import { ProductCard } from '@/components/product/ProductCard';
 import { ProductCardSkeleton } from '@/components/product/ProductCardSkeleton';
 import { Pagination } from '@/components/shared/Pagination';
@@ -18,12 +19,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
+// Backend chỉ hỗ trợ 3 giá trị này (ProductSortOrder) — không có sort theo soldCount/rating.
 const SORT_OPTIONS = [
-  { value: 'relevance', label: 'Liên quan' },
-  { value: 'price,asc', label: 'Giá thấp → cao' },
-  { value: 'price,desc', label: 'Giá cao → thấp' },
-  { value: 'soldCount,desc', label: 'Bán chạy' },
-  { value: 'rating,desc', label: 'Đánh giá cao' },
+  { value: 'RELEVANCE', label: 'Liên quan' },
+  { value: 'PRICE_ASC', label: 'Giá thấp → cao' },
+  { value: 'PRICE_DESC', label: 'Giá cao → thấp' },
+  { value: 'NEWEST', label: 'Mới nhất' },
 ];
 
 function SearchContent() {
@@ -32,7 +33,7 @@ function SearchContent() {
 
   const q = params.get('q') ?? '';
   const categoryId = params.get('categoryId') ?? '';
-  const sort = params.get('sort') ?? 'relevance';
+  const sort = params.get('sort') ?? 'RELEVANCE';
   const brand = params.get('brand') ?? '';
   const minPrice = params.get('minPrice') ?? '';
   const maxPrice = params.get('maxPrice') ?? '';
@@ -64,14 +65,12 @@ function SearchContent() {
       const sp = new URLSearchParams({ q, sort, page: String(page), size: '20' });
       if (categoryId) sp.set('categoryId', categoryId);
       if (brand) sp.set('brand', brand);
-      if (minPrice) sp.set('minPrice', minPrice);
-      if (maxPrice) sp.set('maxPrice', maxPrice);
+      if (minPrice) sp.set('priceMin', minPrice);
+      if (maxPrice) sp.set('priceMax', maxPrice);
       const { data } = await api.get<{ data: RawSearch }>(`/api/search/products?${sp.toString()}`);
       return toSearchResult(data.data);
     },
   });
-
-  const facets = data?.facets;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
@@ -142,41 +141,6 @@ function SearchContent() {
                     Áp dụng
                   </Button>
                 </div>
-
-                {facets?.priceRanges && facets.priceRanges.length > 0 && (
-                  <div className="space-y-1">
-                    {facets.priceRanges.map((r) => (
-                      <button
-                        key={r.label}
-                        onClick={() => updateParams({ minPrice: r.min, maxPrice: r.max })}
-                        className="flex w-full items-center justify-between text-xs text-muted-foreground hover:text-foreground py-1 transition-colors"
-                      >
-                        <span>{r.label}</span>
-                        <span className="text-muted-foreground/60">{r.count}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {facets?.brands && facets.brands.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-2">Thương hiệu</p>
-                    <div className="space-y-1">
-                      {facets.brands.map((b) => (
-                        <button
-                          key={b}
-                          onClick={() => updateParams({ brand: brand === b ? null : b })}
-                          className={cn(
-                            'block w-full text-left text-xs py-1 transition-colors',
-                            brand === b ? 'text-primary font-medium' : 'text-muted-foreground hover:text-foreground'
-                          )}
-                        >
-                          {b}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </>
             )}
           </div>

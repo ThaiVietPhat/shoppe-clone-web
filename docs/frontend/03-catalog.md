@@ -1,61 +1,51 @@
 # 03 — Catalog: Homepage, Browse, Search, AI Recommend
 
+> Đối chiếu lại với Swagger sống ngày phiên sửa bug lớn (xem `CLAUDE.md` đầu repo). Bản trước mô tả field tưởng tượng (`productId`, `coverImage`, `priceMin/Max`, `stockStatus`...) không khớp backend thật — đã sửa toàn bộ dưới đây theo `ProductCardResponse`/`ProductDetailResponse`/`ProductVariantDetailResponse` thật.
+
 ---
 
 ## ProductCardResponse (contract dùng chung trên mọi surface)
 
-Mọi endpoint listing đều trả cùng shape `ProductCardResponse`:
-
 ```ts
 interface ProductCardResponse {
-  productId: string;         // UUID
+  id: string;                    // KHÔNG phải productId
   name: string;
-  slug: string | null;
-  coverImage: MediaInfo | null;
-  priceMin: number;          // VND, price range low
-  priceMax: number;          // VND, price range high
-  shop: ShopSummary;
-  rating: number | null;     // 0–5
-  soldCount: number;
+  brand: string | null;
+  sellerSku: string | null;
+  coverImageUrl: string | null;  // string phẳng, KHÔNG phải object coverImage: {url}
+  coverMediaId: string | null;
+  coverObjectKey: string | null;
+  coverContentType: string | null;
+  minPrice: number;              // KHÔNG phải priceMin
+  maxPrice: number;               // KHÔNG phải priceMax
   status: 'ACTIVE' | 'INACTIVE' | 'DRAFT' | 'DELETED';
-  checkoutEligible: boolean; // false nếu không thể mua (hết hàng, inactive...)
-  categoryPath: string | null; // "Điện tử > Laptop"
-}
-
-interface MediaInfo {
-  mediaId: string;
-  url: string;
-  contentType: string;
-}
-
-interface ShopSummary {
   shopId: string;
-  shopName: string;
-  logoUrl: string | null;
+  shopName: string;               // field phẳng, KHÔNG có object shop: {...}
+  shopRating: number | null;      // rating của SHOP — sản phẩm không có rating riêng
+  categoryPath: string | null;
+  checkoutEligible: boolean;
+  eligibilityIssues: ('PRODUCT_NOT_ACTIVE' | 'NO_ACTIVE_VARIANT' | 'NO_POSITIVE_PRICE' | 'NO_STOCK')[];
+  createdAt: string;
 }
 ```
+
+**Không tồn tại:** `slug`, `rating` (cấp sản phẩm), `soldCount`, `reasonCode`/`reasonLabel` (đó là field của recommendation wrapper, xem mục 6). Nếu cần các field này, phải bổ sung backend trước — đừng đoán giá trị ở FE.
 
 ---
 
 ## 1. Homepage
 
-Trả sản phẩm nổi bật / trending cho trang chủ. Không cần auth.
-
 ```http
 GET /api/products/homepage?page=0&size=20
 ```
 
-Response:
+Response (`PagedResponse<ProductCardResponse>`, field `items` — không phải `content`):
 ```json
 {
   "code": 200,
   "data": {
     "items": [ /* ProductCardResponse[] */ ],
-    "page": 0,
-    "size": 20,
-    "totalElements": 120,
-    "totalPages": 6,
-    "last": false
+    "page": 0, "size": 20, "totalElements": 120, "totalPages": 6, "last": false
   }
 }
 ```
@@ -68,39 +58,13 @@ Response:
 GET /api/categories
 ```
 
-Trả về **danh sách phẳng** (KHÔNG phải cây lồng nhau), cached 30 phút trên server. Mỗi item có `id`, `parentId`, `path` (materialized path) — tự dựng cây từ `parentId` nếu cần, hoặc hiển thị trực tiếp theo `path`:
-```json
-{
-  "code": 200,
-  "data": [
-    {
-      "id": "uuid",
-      "parentId": null,
-      "name": "Điện tử",
-      "path": "Điện tử",
-      "createdAt": "2026-01-01T00:00:00Z",
-      "updatedAt": "2026-01-01T00:00:00Z"
-    },
-    {
-      "id": "uuid",
-      "parentId": "parent-uuid",
-      "name": "Laptop",
-      "path": "Điện tử > Laptop",
-      "createdAt": "2026-01-01T00:00:00Z",
-      "updatedAt": "2026-01-01T00:00:00Z"
-    }
-  ]
-}
-```
+Trả **danh sách phẳng** (không phải cây lồng nhau), field thật: `id`, `parentId`, `name`, `path` (materialized path), `createdAt`, `updatedAt`. Không có `categoryId`, `slug`, `children`.
 
-> ⚠️ Backend dùng field `id`/`parentId`/`path` — KHÔNG có `categoryId`, `slug`, hay `children`. Danh mục là master data do admin quản lý; hiện chưa có API tạo/sửa danh mục (seed qua migration `V22__seed_categories.sql`).
-
-Browse sản phẩm theo category:
 ```http
-GET /api/categories/{categoryId}/products?page=0&size=20&sort=soldCount,desc
+GET /api/categories/{categoryId}/products?page=0&size=20&sort=NEWEST
 ```
 
-Response: `Page<ProductCardResponse>` — cùng shape với homepage.
+`sort` chỉ nhận **enum viết hoa**: `NEWEST` (default) | `PRICE_ASC` | `PRICE_DESC`. Không có `soldCount,desc`/`rating,desc` kiểu comma-syntax — đó là quy ước khác (đã dùng nhầm ở version cũ). Response: `PagedResponse<ProductCardResponse>` cùng shape với homepage.
 
 ---
 
@@ -110,114 +74,105 @@ Response: `Page<ProductCardResponse>` — cùng shape với homepage.
 GET /api/products/{productId}
 ```
 
-Response:
+**Chỉ trả sản phẩm `status=ACTIVE`.** Trang seller edit product phải gọi `GET /api/seller/products/{productId}` thay vì endpoint này (xem `07-seller.md`) — nếu không, mọi sản phẩm DRAFT/INACTIVE sẽ báo "không tìm thấy" khi seller cố sửa.
+
+Response thật (`ProductDetailResponse`):
 ```json
 {
   "code": 200,
   "data": {
-    "productId": "uuid",
+    "id": "uuid",
+    "shopId": "uuid",
+    "status": "ACTIVE",
     "name": "Laptop Gaming ASUS TUF",
     "description": "Mô tả chi tiết...",
     "brand": "ASUS",
-    "categoryPath": "Điện tử > Laptop",
-    "status": "ACTIVE",
-    "checkoutEligible": true,
-    "attributes": [
-      { "name": "RAM", "value": "16GB" },
-      { "name": "CPU", "value": "Intel i7" }
-    ],
-    "priceMin": 25000000,
-    "priceMax": 35000000,
-    "rating": 4.5,
-    "soldCount": 128,
-    "shop": {
-      "shopId": "uuid",
-      "shopName": "Tech Store VN",
-      "logoUrl": "https://..."
-    },
+    "sellerSku": "ASUS-TUF-2024",
+    "categoryId": "uuid",
+    "categoryPath": "Điện tử/Laptop",
+    "attributes": { "RAM": "16GB", "CPU": "Intel i7" },
+    "minPrice": 25000000,
+    "maxPrice": 35000000,
+    "hasCover": true,
     "media": [
-      { "mediaId": "uuid", "url": "https://...", "contentType": "image/jpeg", "isPrimary": true },
-      { "mediaId": "uuid", "url": "https://...", "contentType": "image/jpeg", "isPrimary": false }
+      { "mediaId": "uuid", "publicUrl": "https://...", "objectKey": "...", "contentType": "image/jpeg", "sortOrder": 0, "cover": true }
     ],
-    "variants": [
-      {
-        "variantId": "uuid",
-        "sku": "ASUS-TUF-16-512",
-        "options": [
-          { "name": "RAM", "value": "16GB" },
-          { "name": "Storage", "value": "512GB SSD" }
-        ],
-        "price": 25000000,
-        "stockStatus": "IN_STOCK",  // IN_STOCK | LOW_STOCK | OUT_OF_STOCK
-        "availableStock": 5,
-        "checkoutEligible": true
-      },
-      {
-        "variantId": "uuid",
-        "sku": "ASUS-TUF-32-1TB",
-        "options": [
-          { "name": "RAM", "value": "32GB" },
-          { "name": "Storage", "value": "1TB SSD" }
-        ],
-        "price": 35000000,
-        "stockStatus": "OUT_OF_STOCK",
-        "availableStock": 0,
-        "checkoutEligible": false
-      }
-    ]
+    "variants": [ /* ProductVariantDetailResponse[], xem dưới */ ],
+    "eligibilityIssues": [],
+    "shop": { "id": "uuid", "name": "Tech Store VN", "rating": 4.8 },
+    "totalAvailableStock": 5,
+    "createdAt": "2026-01-01T00:00:00Z",
+    "updatedAt": "2026-01-01T00:00:00Z"
   }
 }
 ```
 
+Khác biệt quan trọng so với bản mô tả cũ:
+- `attributes` là **object phẳng** `Record<string, unknown>` (`{"RAM": "16GB"}`), KHÔNG phải mảng `[{name, value}]`.
+- `media[].publicUrl` (KHÔNG phải `url`), `media[].cover: boolean` (KHÔNG phải `isPrimary`).
+- `shop` chỉ có `{id, name, rating}` — **không có `logoUrl`/`description` ở đây**.
+- Không có `rating`/`soldCount` ở cấp product. Không có `checkoutEligible` ở cấp product (chỉ có ở từng variant) — suy ra "còn hàng nói chung" bằng `eligibilityIssues.length === 0`.
+
+### Variant (`ProductVariantDetailResponse`)
+
+```ts
+interface ProductVariantDetailResponse {
+  id: string;                          // KHÔNG phải variantId
+  productId: string;
+  sku: string;
+  name: string;
+  price: number;
+  optionLabels: Record<string, string>; // { "RAM": "16GB", "Storage": "512GB SSD" } — map, KHÔNG phải options: [{name,value}]
+  active: boolean;
+  availableStock: number;
+  checkoutEligible: boolean;
+  coverMedia: ProductMediaSummary | null;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+**Không có `stockStatus` từ backend.** Tự tính ở FE bằng `getStockStatus(availableStock)` (`lib/utils.ts`, ngưỡng low-stock ≤ 5 là quy ước FE tự chọn, không phải hợp đồng backend).
+
 **UI notes:**
-- Render option selector từ `variants[].options` — group theo `name` để tạo matrix chọn variant
-- Disable nút "Thêm vào giỏ" nếu `variant.checkoutEligible === false`
-- Hiển thị `stockStatus` badge: IN_STOCK (xanh), LOW_STOCK (cam), OUT_OF_STOCK (đỏ)
+- Group variant theo từng key của `optionLabels` để dựng option-selector (không phải group theo `options[].name`).
+- Disable nút "Thêm vào giỏ" nếu `variant.checkoutEligible === false`.
 
 ---
 
 ## 4. Keyword Search
 
 ```http
-GET /api/search/products?q=laptop gaming&page=0&size=20
+GET /api/search/products?q=laptop gaming&page=0&size=20&priceMin=0&priceMax=30000000&sort=RELEVANCE
 ```
 
-Query params:
 | Param | Ý nghĩa |
 |---|---|
-| `q` | Từ khóa tìm kiếm (bắt buộc) |
-| `categoryId` | Filter theo category UUID |
-| `minPrice` | Giá tối thiểu (VND) |
-| `maxPrice` | Giá tối đa (VND) |
+| `q` | Từ khóa (optional) |
+| `categoryId` | Filter theo category UUID (bao gồm subtree) |
+| `priceMin` / `priceMax` | Giá — **tên field đúng chính tả này**, không phải `minPrice`/`maxPrice` ở query string (khác với field trả về trên `ProductCardResponse`!) |
 | `brand` | Filter theo brand |
-| `sort` | `relevance` (default), `price,asc`, `price,desc`, `soldCount,desc`, `rating,desc` |
-| `page` | Trang (0-based) |
-| `size` | Số kết quả mỗi trang |
+| `sort` | `RELEVANCE` (default) \| `PRICE_ASC` \| `PRICE_DESC` \| `NEWEST` — **enum viết hoa**, không có `soldCount,desc`/`rating,desc` |
+| `page`, `size` | Phân trang, `size` tối đa 50 |
 
-Response:
+**Response lồng một cấp khác với homepage** — không phải `{items,...}` phẳng ở `data`:
 ```json
 {
   "code": 200,
   "data": {
-    "items": [ /* ProductCardResponse[] */ ],
-    "page": 0,
-    "size": 20,
-    "totalElements": 45,
-    "totalPages": 3,
-    "last": false,
+    "products": {
+      "items": [ /* ProductCardResponse[] */ ],
+      "page": 0, "size": 20, "totalElements": 45, "totalPages": 3, "last": false
+    },
     "degraded": false,
-    "facets": {
-      "brands": ["ASUS", "Dell", "HP"],
-      "priceRanges": [
-        { "label": "Dưới 10 triệu", "min": 0, "max": 10000000, "count": 12 },
-        { "label": "10–25 triệu", "min": 10000000, "max": 25000000, "count": 20 }
-      ]
-    }
+    "degradedReason": null
   }
 }
 ```
 
-Khi `degraded: true`: Elasticsearch không khả dụng, kết quả dùng PostgreSQL fallback — vẫn hoạt động nhưng thiếu facets và relevance scoring. Hiển thị banner cảnh báo nhỏ.
+Đọc bằng `data.products.items`, không phải `data.items`. **Không có `facets`** (brands/priceRanges) trong response thật — nếu FE có UI facet, đó là suy diễn phía client, không phải dữ liệu backend trả về.
+
+Khi `degraded: true`: Elasticsearch không khả dụng, kết quả dùng PostgreSQL fallback (`degradedReason: "ELASTICSEARCH_UNAVAILABLE"`).
 
 ---
 
@@ -227,9 +182,7 @@ Khi `degraded: true`: Elasticsearch không khả dụng, kết quả dùng Postg
 GET /api/search/products/semantic?q=laptop cho sinh viên thiết kế&page=0&size=10
 ```
 
-Dùng pgvector để tìm sản phẩm tương đồng về ngữ nghĩa.
-
-Response: cùng shape với keyword search. `degraded: true` nếu AI provider (Gemini) không khả dụng — khi đó trả empty hoặc fallback.
+`q` là **bắt buộc** ở endpoint này (khác keyword search). Response cùng shape `SearchResponse` như mục 4 (`data.products.items`). `degraded: true`, `degradedReason: "AI_PROVIDER_UNAVAILABLE"` khi Gemini không khả dụng.
 
 ---
 
@@ -242,55 +195,34 @@ GET /api/recommendations/home?page=0&size=20
 Authorization: Bearer <token>  (optional — anonymous nhận trending fallback)
 ```
 
-Response:
+Response **không phân trang** (`RecommendationResponse`, không có `page/size/totalElements`):
 ```json
 {
   "code": 200,
   "data": {
     "items": [
       {
-        /* ProductCardResponse */
-        "reasonCode": "SIMILAR_TO_CART",
-        "reasonLabel": "Vì bạn đã thêm vào giỏ"
+        "product": { /* ProductCardResponse đầy đủ */ },
+        "reasonCodes": ["SIMILAR_TO_CART"]
       }
     ],
-    "degraded": false
+    "degraded": false,
+    "degradedReason": null,
+    "generatedText": null
   }
 }
 ```
 
-`reasonCode` values:
-- `TRENDING` — sản phẩm phổ biến (anonymous fallback)
-- `RECENTLY_VIEWED` — dựa trên lịch sử xem
-- `SIMILAR_TO_CART` — tương tự sản phẩm trong giỏ
-- `SIMILAR_TO_ORDER` — tương tự đơn đã mua
-- `AI_SEMANTIC_MATCH` — AI matching
+Mỗi phần tử là `{product, reasonCodes}` — **không phải `ProductCardResponse` phẳng có thêm `reasonCode`/`reasonLabel`**. Luôn đọc `item.product.id`, không phải `item.id`. `reasonCodes` (số nhiều, mảng) values thật: `TRENDING | RECENTLY_VIEWED | SIMILAR_TO_CART | SIMILAR_TO_ORDER | WISHLIST_RELATED | AI_SEMANTIC_MATCH`.
 
-### Chat Recommend (AI shopping assistant)
+### Chat Recommend (AI shopping assistant — widget nổi)
 
 ```http
 POST /api/recommendations/chat
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "query": "Tôi cần tai nghe chống ồn dưới 2 triệu để học online"
-}
+{ "query": "Tôi cần tai nghe chống ồn dưới 2 triệu để học online" }
 ```
 
-Response:
-```json
-{
-  "code": 200,
-  "data": {
-    "products": [ /* ProductCardResponse[] với reasonCode */ ],
-    "explanation": "Dựa trên yêu cầu của bạn, đây là những tai nghe chống ồn phù hợp trong tầm giá...",
-    "degraded": false
-  }
-}
-```
-
-**Lưu ý:** `explanation` là text do AI generate — chỉ dùng để hiển thị, không parse thông tin giá/stock từ text này. Luôn dùng `products[].priceMin/Max` và `products[].checkoutEligible` từ DTO.
+Response `ChatRecommendResponse` — **cùng shape `{items: [{product, reasonCodes}], degraded, degradedReason, generatedText}`** như home recommendation ở trên, không phải `{products, explanation}`. `generatedText` là lời giải thích AI generate — chỉ hiển thị, không parse giá/tồn kho từ đó; luôn lấy từ `item.product`.
 
 ---
 
@@ -300,26 +232,28 @@ Response:
 GET /api/shops/{shopId}
 ```
 
-Response:
+Response thật (`ShopResponse`) — **field ít hơn nhiều so với mô tả cũ**:
 ```json
 {
   "code": 200,
   "data": {
-    "shopId": "uuid",
-    "shopName": "Tech Store VN",
+    "id": "uuid",
+    "ownerId": "uuid",
+    "name": "Tech Store VN",
     "description": "...",
-    "logoUrl": "https://...",
-    "bannerUrl": "https://...",
-    "productCount": 45,
     "rating": 4.8,
-    "followerCount": 1200
+    "logo": { "id": "uuid", "publicUrl": "https://...", "contentType": "image/png", "...": "..." },
+    "createdAt": "...",
+    "updatedAt": "..."
   }
 }
 ```
+
+**Không có** `shopName` (là `name`), `logoUrl` phẳng (là `logo.publicUrl`, `logo` có thể `null`), `bannerUrl`, `productCount`, `followerCount` — các field này chưa được backend track, đừng hiển thị UI dựa trên chúng cho tới khi có API thật.
 
 Sản phẩm của shop:
 ```http
 GET /api/shops/{shopId}/products?page=0&size=20
 ```
 
-Response: `Page<ProductCardResponse>`
+Response: `PagedResponse<ProductCardResponse>` (field `items`, giống mục 1).
