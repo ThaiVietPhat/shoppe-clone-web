@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ImageUpload } from '@/components/shared/ImageUpload';
+import { useAuthStore } from '@/stores/auth.store';
 import { toast } from 'sonner';
 
 interface OptionInput { name: string; value: string }
@@ -32,6 +33,7 @@ function flattenCategories(nodes: CategoryNode[]): { id: string; label: string }
 
 export default function NewProductPage() {
   const router = useRouter();
+  const { user } = useAuthStore();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [brand, setBrand] = useState('');
@@ -59,6 +61,7 @@ export default function NewProductPage() {
       const { data } = await api.get<{ data: ShopDetail }>('/api/shops/me');
       return data.data;
     },
+    enabled: !!user,
   });
   const shopId = shop?.id ?? '';
 

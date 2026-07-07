@@ -110,7 +110,7 @@ export interface ProductDetail {
   sellerSku: string | null;
   categoryId: string;
   categoryPath: string | null;
-  attributes: Record<string, unknown>;
+  attributes: Record<string, unknown> | null;
   minPrice: number;
   maxPrice: number;
   hasCover: boolean;

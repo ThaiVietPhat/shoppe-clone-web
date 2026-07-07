@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import Link from 'next/link';
 import { formatPrice, formatDateTime } from '@/lib/utils';
+import { useAuthStore } from '@/stores/auth.store';
 import { toast } from 'sonner';
 
 const MOVEMENT_TYPE_LABEL: Record<InventoryMovement['movementType'], string> = {
@@ -31,6 +32,7 @@ export default function EditProductPage({ params }: { params: Promise<{ productI
   const { productId } = use(params);
   const router = useRouter();
   const qc = useQueryClient();
+  const { user } = useAuthStore();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -46,6 +48,7 @@ export default function EditProductPage({ params }: { params: Promise<{ productI
       const { data } = await api.get<{ data: ProductDetail }>(`/api/seller/products/${productId}`);
       return data.data;
     },
+    enabled: !!user,
   });
 
   useEffect(() => {

@@ -18,10 +18,12 @@ import { Pagination } from '@/components/shared/Pagination';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { formatPrice, formatDateTime, cn } from '@/lib/utils';
 import { ORDER_STATUS_LABEL, ORDER_STATUS_CLASS, SELLER_FULFILLMENT_FILTERS, canShipOrder, canDeliverOrder } from '@/lib/orderStatus';
+import { useAuthStore } from '@/stores/auth.store';
 import { toast } from 'sonner';
 
 function SellerOrdersContent() {
   const qc = useQueryClient();
+  const { user } = useAuthStore();
   const [fulfillmentStatus, setFulfillmentStatus] = useState('');
   const [page, setPage] = useState(0);
   const [shipOrder, setShipOrder] = useState<string | null>(null);
@@ -36,6 +38,7 @@ function SellerOrdersContent() {
       );
       return pageFrom(data.data);
     },
+    enabled: !!user,
   });
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['seller-orders'] });

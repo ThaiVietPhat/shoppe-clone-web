@@ -418,7 +418,7 @@ export default function ProductDetailPage({
           <TabsTrigger value="reviews" className="data-[state=active]:bg-white/10">
             Đánh giá ({reviewsData?.ratingCount ?? 0})
           </TabsTrigger>
-          {Object.keys(product.attributes).length > 0 && (
+          {Object.keys(product.attributes ?? {}).length > 0 && (
             <TabsTrigger value="specs" className="data-[state=active]:bg-white/10">
               Thông số
             </TabsTrigger>
@@ -510,11 +510,11 @@ export default function ProductDetailPage({
           </div>
         </TabsContent>
 
-        {Object.keys(product.attributes).length > 0 && (
+        {Object.keys(product.attributes ?? {}).length > 0 && (
           <TabsContent value="specs" className="mt-4">
             <div className="rounded-xl border border-white/8 bg-card p-6">
               <div className="divide-y divide-white/6">
-                {Object.entries(product.attributes).map(([name, value]) => (
+                {Object.entries(product.attributes ?? {}).map(([name, value]) => (
                   <div key={name} className="flex py-3 text-sm">
                     <span className="w-40 shrink-0 text-muted-foreground">{name}</span>
                     <span className="text-foreground">{String(value)}</span>

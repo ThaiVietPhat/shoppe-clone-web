@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Pagination } from '@/components/shared/Pagination';
 import { formatRelative, cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/auth.store';
 
 const TYPE_ICON: Record<string, typeof Bell> = {
   ORDER_CONFIRMED: CheckCircle2,
@@ -25,6 +26,7 @@ const TYPE_ICON: Record<string, typeof Bell> = {
 export default function NotificationsPage() {
   const router = useRouter();
   const qc = useQueryClient();
+  const { user } = useAuthStore();
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [page, setPage] = useState(0);
 
@@ -36,6 +38,7 @@ export default function NotificationsPage() {
       );
       return pageFrom(data.data);
     },
+    enabled: !!user,
   });
 
   const markRead = useMutation({

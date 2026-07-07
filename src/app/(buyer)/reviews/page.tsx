@@ -16,9 +16,11 @@ import {
 import { Pagination } from '@/components/shared/Pagination';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { formatDateTime, cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/auth.store';
 import { toast } from 'sonner';
 
 export default function MyReviewsPage() {
+  const { user } = useAuthStore();
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<Review | null>(null);
 
@@ -30,6 +32,7 @@ export default function MyReviewsPage() {
       );
       return pageFrom(data.data);
     },
+    enabled: !!user,
   });
 
   return (

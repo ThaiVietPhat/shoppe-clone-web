@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination } from '@/components/shared/Pagination';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { formatPriceRange, formatDateTime, cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/auth.store';
 import { toast } from 'sonner';
 
 const STATUS_FILTERS = [
@@ -35,17 +36,20 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default function SellerProductsPage() {
   const qc = useQueryClient();
+  const { user } = useAuthStore();
   const [status, setStatus] = useState('ALL');
   const [page, setPage] = useState(0);
 
   const { data, isLoading } = useQuery({
     queryKey: ['seller-products', status, page],
     queryFn: async () => {
+      const statusQuery = status !== 'ALL' ? `&status=${status}` : '';
       const { data } = await api.get<{ data: PagedResponse<SellerProduct> }>(
-        `/api/seller/products?page=${page}&size=20&status=${status}`
+        `/api/seller/products?page=${page}&size=20${statusQuery}`
       );
       return pageFrom(data.data);
     },
+    enabled: !!user,
   });
 
   const togglePublish = useMutation({

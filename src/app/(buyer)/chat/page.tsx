@@ -19,6 +19,7 @@ function ChatContent() {
   const router = useRouter();
   const params = useSearchParams();
   const activeRoomId = params.get('roomId');
+  const { user } = useAuthStore();
 
   const { data: rooms, isLoading: roomsLoading } = useQuery({
     queryKey: ['chat-rooms'],
@@ -26,6 +27,7 @@ function ChatContent() {
       const { data } = await api.get<{ data: ChatRoom[] }>('/api/chat/rooms?page=0&size=20');
       return data.data;
     },
+    enabled: !!user,
   });
 
   return (
@@ -87,6 +89,7 @@ function ChatRoomView({ roomId, shopName }: { roomId: string; shopName?: string 
       const { data } = await api.get<{ data: PagedResponse<ChatMessage> }>(`/api/chat/rooms/${roomId}/messages?page=0&size=50`);
       return [...pageFrom(data.data).content].reverse();
     },
+    enabled: !!user,
   });
 
   useEffect(() => { if (history) setMessages(history); }, [history]);

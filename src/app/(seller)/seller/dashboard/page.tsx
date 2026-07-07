@@ -9,15 +9,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { formatPrice, formatDateTime, cn } from '@/lib/utils';
 import { ORDER_STATUS_LABEL, ORDER_STATUS_CLASS } from '@/lib/orderStatus';
+import { useAuthStore } from '@/stores/auth.store';
 
 export default function SellerDashboardPage() {
   const router = useRouter();
+  const { user } = useAuthStore();
   const { data, isLoading } = useQuery({
     queryKey: ['seller-dashboard'],
     queryFn: async () => {
       const { data } = await api.get<{ data: SellerDashboard }>('/api/seller/dashboard');
       return data.data;
     },
+    enabled: !!user,
   });
 
   const stats = [

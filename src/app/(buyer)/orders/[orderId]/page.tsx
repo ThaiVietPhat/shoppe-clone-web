@@ -17,11 +17,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { ReviewDialog } from '@/components/order/ReviewDialog';
 import { formatPrice, formatDateTime, cn } from '@/lib/utils';
 import { ORDER_STATUS_LABEL, ORDER_STATUS_CLASS, TIMELINE_EVENT_LABEL, canCancelOrder, canReviewOrder } from '@/lib/orderStatus';
+import { useAuthStore } from '@/stores/auth.store';
 import { toast } from 'sonner';
 
 export default function OrderDetailPage({ params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = use(params);
   const qc = useQueryClient();
+  const { user } = useAuthStore();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [reviewItem, setReviewItem] = useState<{ orderItemId: string; productName: string } | null>(null);
@@ -32,6 +34,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
       const { data } = await api.get<{ data: OrderDetail }>(`/api/buyer/orders/${orderId}`);
       return data.data;
     },
+    enabled: !!user,
   });
 
   const cancel = useMutation({

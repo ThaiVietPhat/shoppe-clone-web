@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import { formatPrice, cn } from '@/lib/utils';
 import { CHECKOUT_INVALID_REASON } from '@/lib/orderStatus';
+import { useAuthStore } from '@/stores/auth.store';
 import { toast } from 'sonner';
 
 const addressSchema = z.object({
@@ -35,6 +36,7 @@ type AddressForm = z.infer<typeof addressSchema>;
 export default function CheckoutPage() {
   const router = useRouter();
   const qc = useQueryClient();
+  const { user } = useAuthStore();
   const [idempotencyKey] = useState(() => uuidv4());
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'VNPAY' | 'COD'>('COD');
@@ -51,6 +53,7 @@ export default function CheckoutPage() {
       if (def && !selectedAddressId) setSelectedAddressId(def.id);
       return list;
     },
+    enabled: !!user,
   });
 
   const invalidateAddresses = () => qc.invalidateQueries({ queryKey: ['addresses'] });

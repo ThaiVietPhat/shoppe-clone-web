@@ -11,12 +11,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ImageUpload } from '@/components/shared/ImageUpload';
+import { useAuthStore } from '@/stores/auth.store';
 import { toast } from 'sonner';
 
 type Media = { mediaId: string; url: string };
 
 export default function ShopSettingsPage() {
   const qc = useQueryClient();
+  const { user } = useAuthStore();
   const [shopName, setShopName] = useState('');
   const [description, setDescription] = useState('');
   const [logo, setLogo] = useState<Media | null>(null);
@@ -27,6 +29,7 @@ export default function ShopSettingsPage() {
       const { data } = await api.get<{ data: ShopDetail }>('/api/shops/me');
       return data.data;
     },
+    enabled: !!user,
   });
   const shopId = shop?.id ?? '';
 

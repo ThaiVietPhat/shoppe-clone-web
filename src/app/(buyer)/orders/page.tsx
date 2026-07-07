@@ -14,12 +14,14 @@ import { Pagination } from '@/components/shared/Pagination';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { formatPrice, formatDateTime, cn } from '@/lib/utils';
 import { ORDER_STATUS_LABEL, ORDER_STATUS_CLASS, ORDER_STATUS_FILTERS } from '@/lib/orderStatus';
+import { useAuthStore } from '@/stores/auth.store';
 
 function OrdersContent() {
   const router = useRouter();
   const params = useSearchParams();
   const status = params.get('status') ?? '';
   const [page, setPage] = useState(0);
+  const { user } = useAuthStore();
 
   const { data, isLoading } = useQuery({
     queryKey: ['buyer-orders', status, page],
@@ -30,6 +32,7 @@ function OrdersContent() {
       );
       return pageFrom(data.data);
     },
+    enabled: !!user,
   });
 
   function setStatus(s: string) {

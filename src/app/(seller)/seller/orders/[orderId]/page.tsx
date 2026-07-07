@@ -12,11 +12,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { formatPrice, formatDateTime, cn } from '@/lib/utils';
 import { ORDER_STATUS_LABEL, ORDER_STATUS_CLASS, FULFILLMENT_STATUS_LABEL, canShipOrder, canDeliverOrder } from '@/lib/orderStatus';
+import { useAuthStore } from '@/stores/auth.store';
 import { toast } from 'sonner';
 
 export default function SellerOrderDetailPage({ params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = use(params);
   const qc = useQueryClient();
+  const { user } = useAuthStore();
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['seller-order', orderId],
@@ -24,6 +26,7 @@ export default function SellerOrderDetailPage({ params }: { params: Promise<{ or
       const { data } = await api.get<{ data: SellerOrderDetail }>(`/api/seller/orders/${orderId}`);
       return data.data;
     },
+    enabled: !!user,
   });
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['seller-order', orderId] });
