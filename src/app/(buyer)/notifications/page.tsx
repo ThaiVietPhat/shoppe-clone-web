@@ -15,6 +15,7 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { Pagination } from '@/components/shared/Pagination';
 import { formatRelative, cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
+import { useRequireAuth } from '@/hooks/use-require-auth';
 
 const TYPE_ICON: Record<string, typeof Bell> = {
   ORDER_CONFIRMED: CheckCircle2,
@@ -27,6 +28,7 @@ export default function NotificationsPage() {
   const router = useRouter();
   const qc = useQueryClient();
   const { user } = useAuthStore();
+  const { ready } = useRequireAuth();
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [page, setPage] = useState(0);
 
@@ -81,7 +83,7 @@ export default function NotificationsPage() {
         ))}
       </div>
 
-      {isLoading ? (
+      {!ready || isLoading ? (
         <div className="space-y-2">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-xl bg-white/5" />)}</div>
       ) : !data || data.content.length === 0 ? (
         <EmptyState icon={Bell} title="Không có thông báo" />

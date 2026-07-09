@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { api, setAccessToken } from '@/lib/api';
+import { getApiErrorMessage } from '@/lib/error';
 import { useAuthStore } from '@/stores/auth.store';
 import { CurrentUserResponse, LoginResponse } from '@/types/api';
 import { toStoreUser } from '@/lib/user';
@@ -28,9 +29,15 @@ type FormData = z.infer<typeof schema>;
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login } = useAuthStore();
+  const { login, user, isHydrated } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [globalError, setGlobalError] = useState('');
+
+  useEffect(() => {
+    if (isHydrated && user) {
+      router.replace(user.role === 'SELLER' ? '/seller/dashboard' : '/');
+    }
+  }, [isHydrated, user, router]);
 
   const {
     register,
@@ -59,14 +66,13 @@ function LoginForm() {
       else if (user.role === 'ADMIN') router.push('/admin');
       else router.push('/');
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { message?: string; code?: number } } };
-      const msg = axiosErr?.response?.data?.message;
+      const axiosErr = err as { response?: { data?: { code?: number } } };
       const code = axiosErr?.response?.data?.code;
 
       if (code === 429) {
         setGlobalError('Quá nhiều lần thử. Vui lòng thử lại sau.');
       } else {
-        setGlobalError(msg ?? 'Đăng nhập thất bại. Vui lòng thử lại.');
+        setGlobalError(getApiErrorMessage(err, 'Đăng nhập thất bại. Vui lòng thử lại.'));
       }
     }
   }

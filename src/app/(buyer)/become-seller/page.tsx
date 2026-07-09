@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { Loader2, Store } from 'lucide-react';
 import { api, setAccessToken } from '@/lib/api';
+import { getApiErrorMessage } from '@/lib/error';
 import { useAuthStore } from '@/stores/auth.store';
 import { CurrentUserResponse } from '@/types/api';
 import { toStoreUser } from '@/lib/user';
@@ -40,8 +41,7 @@ export default function BecomeSellerPage() {
       router.push('/seller/dashboard');
     },
     onError: (err: unknown) => {
-      const ax = err as { response?: { data?: { message?: string } } };
-      toast.error(ax?.response?.data?.message ?? 'Không thể đăng ký bán hàng');
+      toast.error(getApiErrorMessage(err, 'Không thể đăng ký bán hàng'));
     },
   });
 

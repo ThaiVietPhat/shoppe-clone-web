@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Plus, Trash2, Loader2, Package } from 'lucide-react';
 import { api } from '@/lib/api';
+import { getApiErrorMessage } from '@/lib/error';
 import { CategoryNode, ShopDetail } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -115,8 +116,7 @@ export default function NewProductPage() {
       }
       router.push('/seller/products');
     } catch (err: unknown) {
-      const ax = err as { response?: { data?: { message?: string } } };
-      toast.error(ax?.response?.data?.message ?? 'Không thể tạo sản phẩm');
+      toast.error(getApiErrorMessage(err, 'Không thể tạo sản phẩm'));
     } finally {
       setSubmitting(false);
     }

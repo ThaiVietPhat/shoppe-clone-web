@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
+import { getApiErrorMessage } from '@/lib/error';
 import { Suspense } from 'react';
 
 function VerifyContent() {
@@ -25,7 +26,7 @@ function VerifyContent() {
       .then(() => setStatus('success'))
       .catch((err) => {
         setStatus('error');
-        setMessage(err?.response?.data?.message ?? 'Link xác minh đã hết hạn hoặc không hợp lệ.');
+        setMessage(getApiErrorMessage(err, 'Link xác minh đã hết hạn hoặc không hợp lệ.'));
       });
   }, [searchParams]);
 

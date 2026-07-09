@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ShoppingCart, Trash2, Minus, Plus, Store, Loader2 } from 'lucide-react';
 import { useCart, useCartMutations } from '@/hooks/use-cart';
+import { useRequireAuth } from '@/hooks/use-require-auth';
 import { CartItem } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,6 +19,7 @@ import { toast } from 'sonner';
 
 export default function CartPage() {
   const router = useRouter();
+  const { ready } = useRequireAuth();
   const { data: cart, isLoading } = useCart();
   const { updateQuantity, removeItem, selectItems, selectAll, clearCart } = useCartMutations();
   const [clearOpen, setClearOpen] = useState(false);
@@ -52,7 +54,7 @@ export default function CartPage() {
     router.push('/checkout');
   }
 
-  if (isLoading) {
+  if (!ready || isLoading) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-6 space-y-3">
         {Array.from({ length: 3 }).map((_, i) => (

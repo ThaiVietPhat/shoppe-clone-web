@@ -15,6 +15,7 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { formatPrice, formatDateTime, cn } from '@/lib/utils';
 import { ORDER_STATUS_LABEL, ORDER_STATUS_CLASS, ORDER_STATUS_FILTERS } from '@/lib/orderStatus';
 import { useAuthStore } from '@/stores/auth.store';
+import { useRequireAuth } from '@/hooks/use-require-auth';
 
 function OrdersContent() {
   const router = useRouter();
@@ -22,6 +23,7 @@ function OrdersContent() {
   const status = params.get('status') ?? '';
   const [page, setPage] = useState(0);
   const { user } = useAuthStore();
+  const { ready } = useRequireAuth();
 
   const { data, isLoading } = useQuery({
     queryKey: ['buyer-orders', status, page],
@@ -59,7 +61,7 @@ function OrdersContent() {
         ))}
       </div>
 
-      {isLoading ? (
+      {!ready || isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 w-full rounded-xl bg-white/5" />)}
         </div>

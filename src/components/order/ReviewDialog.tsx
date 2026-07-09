@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Star, Loader2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { getApiErrorMessage } from '@/lib/error';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
@@ -36,8 +37,7 @@ export function ReviewDialog({ open, onOpenChange, orderItemId, productName, ord
       setRating(5);
     },
     onError: (err: unknown) => {
-      const ax = err as { response?: { data?: { message?: string } } };
-      toast.error(ax?.response?.data?.message ?? 'Không thể gửi đánh giá');
+      toast.error(getApiErrorMessage(err, 'Không thể gửi đánh giá'));
     },
   });
 

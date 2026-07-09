@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Loader2, ChevronLeft, Eye, EyeOff, Save, Trash2, Pencil, History } from 'lucide-react';
 import { api } from '@/lib/api';
+import { getApiErrorMessage } from '@/lib/error';
 import { Inventory, InventoryMovement, ProductDetail, ProductVariant } from '@/types/api';
 import { pageFrom, PagedResponse } from '@/lib/page';
 import { Button } from '@/components/ui/button';
@@ -87,8 +88,7 @@ export default function EditProductPage({ params }: { params: Promise<{ productI
       invalidateProduct();
     },
     onError: (err: unknown) => {
-      const ax = err as { response?: { data?: { message?: string } } };
-      toast.error(ax?.response?.data?.message ?? 'Thao tác thất bại');
+      toast.error(getApiErrorMessage(err, 'Thao tác thất bại'));
     },
   });
 
@@ -151,7 +151,7 @@ export default function EditProductPage({ params }: { params: Promise<{ productI
           {product.variants.map((v) => (
             <div key={v.id} className="flex items-center gap-3 rounded-lg border border-white/8 p-3">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">{Object.values(v.optionLabels).join(', ') || v.sku}</p>
+                <p className="text-sm font-medium">{Object.values(v.optionLabels).join(', ') || v.name}</p>
                 <p className="text-xs text-muted-foreground">{v.sku} · {formatPrice(v.price)} · Còn {v.availableStock} {!v.active && '· Ngừng bán'}</p>
               </div>
               <Input
@@ -238,8 +238,7 @@ function EditVariantDialog({
       onOpenChange(false);
     },
     onError: (err: unknown) => {
-      const ax = err as { response?: { data?: { message?: string } } };
-      toast.error(ax?.response?.data?.message ?? 'Không thể cập nhật phiên bản');
+      toast.error(getApiErrorMessage(err, 'Không thể cập nhật phiên bản'));
     },
   });
 

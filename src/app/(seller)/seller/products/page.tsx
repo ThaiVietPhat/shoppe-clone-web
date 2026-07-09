@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Package, Plus, Pencil, Eye, EyeOff } from 'lucide-react';
 import { api } from '@/lib/api';
+import { getApiErrorMessage } from '@/lib/error';
 import { SellerProduct } from '@/types/api';
 import { pageFrom, PagedResponse } from '@/lib/page';
 import { Button } from '@/components/ui/button';
@@ -60,8 +61,7 @@ export default function SellerProductsPage() {
       qc.invalidateQueries({ queryKey: ['seller-products'] });
     },
     onError: (err: unknown) => {
-      const ax = err as { response?: { data?: { message?: string } } };
-      toast.error(ax?.response?.data?.message ?? 'Thao tác thất bại');
+      toast.error(getApiErrorMessage(err, 'Thao tác thất bại'));
     },
   });
 

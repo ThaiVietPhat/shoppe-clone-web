@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Package, MapPin, ChevronLeft, Loader2, Star, CheckCircle2 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { getApiErrorMessage } from '@/lib/error';
 import { OrderDetail } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,12 +19,14 @@ import { ReviewDialog } from '@/components/order/ReviewDialog';
 import { formatPrice, formatDateTime, cn } from '@/lib/utils';
 import { ORDER_STATUS_LABEL, ORDER_STATUS_CLASS, TIMELINE_EVENT_LABEL, canCancelOrder, canReviewOrder } from '@/lib/orderStatus';
 import { useAuthStore } from '@/stores/auth.store';
+import { useRequireAuth } from '@/hooks/use-require-auth';
 import { toast } from 'sonner';
 
 export default function OrderDetailPage({ params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = use(params);
   const qc = useQueryClient();
   const { user } = useAuthStore();
+  const { ready } = useRequireAuth();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [reviewItem, setReviewItem] = useState<{ orderItemId: string; productName: string } | null>(null);
@@ -46,12 +49,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
       setCancelOpen(false);
     },
     onError: (err: unknown) => {
-      const ax = err as { response?: { data?: { message?: string } } };
-      toast.error(ax?.response?.data?.message ?? 'Không thể huỷ đơn');
+      toast.error(getApiErrorMessage(err, 'Không thể huỷ đơn'));
     },
   });
 
-  if (isLoading) {
+  if (!ready || isLoading) {
     return <div className="mx-auto max-w-3xl px-4 py-6 space-y-4">
       <Skeleton className="h-8 w-40 bg-white/5" />
       <Skeleton className="h-32 w-full rounded-xl bg-white/5" />

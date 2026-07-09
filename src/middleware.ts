@@ -1,20 +1,14 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
 
-const PUBLIC_PATHS = ['/', '/login', '/register', '/verify', '/oauth2/callback'];
-const SELLER_PATHS = ['/seller'];
-const ADMIN_PATHS = ['/admin'];
-const AUTH_REQUIRED = ['/cart', '/checkout', '/orders', '/notifications', '/chat'];
-
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // Auth pages: redirect to home if already logged in (checked via cookie presence heuristic)
-  // Full auth check happens client-side via Zustand — middleware just handles basic guards
-  if (pathname.startsWith('/login') || pathname.startsWith('/register')) {
-    return NextResponse.next();
-  }
-
+// Route protection (/seller/* role guard, /cart /checkout /orders /notifications
+// /chat /reviews login guard, /login /register redirect-if-logged-in) is enforced
+// client-side (useRequireAuth hook, (seller)/layout.tsx) instead of here.
+// Reason: the refresh-token cookie backend sets has Path=/api/auth
+// (see AuthSecurityProperties.AuthCookieProperties), so it is never sent on
+// page-navigation requests to this Next.js server — middleware has no reliable
+// signal to check. The access token itself never touches the server; it only
+// ever lives in memory on the client (Zustand), by design.
+export function middleware() {
   return NextResponse.next();
 }
 

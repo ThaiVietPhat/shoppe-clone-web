@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Star, ShoppingCart } from 'lucide-react';
@@ -18,6 +19,7 @@ interface ProductCardProps {
 
 export function ProductCard({ product, className }: ProductCardProps) {
   const { user } = useAuthStore();
+  const [imageFailed, setImageFailed] = useState(false);
 
   async function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault();
@@ -29,7 +31,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
     window.location.href = `/products/${product.id}`;
   }
 
-  const imageUrl = product.coverImageUrl;
+  const imageUrl = imageFailed ? null : product.coverImageUrl;
   const hasRange = product.minPrice !== product.maxPrice;
 
   return (
@@ -50,6 +52,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
+            onError={() => setImageFailed(true)}
           />
         ) : (
           <div className="flex h-full items-center justify-center text-muted-foreground/30">

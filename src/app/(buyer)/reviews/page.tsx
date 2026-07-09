@@ -17,10 +17,12 @@ import { Pagination } from '@/components/shared/Pagination';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { formatDateTime, cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
+import { useRequireAuth } from '@/hooks/use-require-auth';
 import { toast } from 'sonner';
 
 export default function MyReviewsPage() {
   const { user } = useAuthStore();
+  const { ready } = useRequireAuth();
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<Review | null>(null);
 
@@ -39,7 +41,7 @@ export default function MyReviewsPage() {
     <div className="mx-auto max-w-2xl px-4 py-6">
       <h1 className="text-lg font-semibold text-foreground mb-4">Đánh giá của tôi</h1>
 
-      {isLoading ? (
+      {!ready || isLoading ? (
         <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-xl bg-white/5" />)}</div>
       ) : !data || data.content.length === 0 ? (
         <EmptyState icon={MessageSquareText} title="Bạn chưa có đánh giá nào" />

@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { useChatSubscription } from '@/hooks/use-chat';
 import { useAuthStore } from '@/stores/auth.store';
+import { useRequireAuth } from '@/hooks/use-require-auth';
 import { formatRelative, cn } from '@/lib/utils';
 
 function ChatContent() {
@@ -20,6 +21,7 @@ function ChatContent() {
   const params = useSearchParams();
   const activeRoomId = params.get('roomId');
   const { user } = useAuthStore();
+  const { ready } = useRequireAuth();
 
   const { data: rooms, isLoading: roomsLoading } = useQuery({
     queryKey: ['chat-rooms'],
@@ -36,7 +38,7 @@ function ChatContent() {
       <div className="grid md:grid-cols-[280px_1fr] gap-4 h-[70vh]">
         {/* Room list */}
         <div className="rounded-xl border border-white/8 bg-card overflow-y-auto">
-          {roomsLoading ? (
+          {!ready || roomsLoading ? (
             <div className="p-3 space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 w-full bg-white/5" />)}</div>
           ) : !rooms || rooms.length === 0 ? (
             <EmptyState icon={MessagesSquare} title="Chưa có cuộc trò chuyện" />

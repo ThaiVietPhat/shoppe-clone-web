@@ -9,6 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { MapPin, Plus, Loader2, CreditCard, Banknote, AlertCircle, Check, Pencil, Trash2, Star } from 'lucide-react';
 import { api } from '@/lib/api';
+import { getApiErrorMessage } from '@/lib/error';
 import { Address, CheckoutPreview, CheckoutResponse, PaymentStatusResponse } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +21,7 @@ import {
 import { formatPrice, cn } from '@/lib/utils';
 import { CHECKOUT_INVALID_REASON } from '@/lib/orderStatus';
 import { useAuthStore } from '@/stores/auth.store';
+import { useRequireAuth } from '@/hooks/use-require-auth';
 import { toast } from 'sonner';
 
 const addressSchema = z.object({
@@ -37,6 +39,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const qc = useQueryClient();
   const { user } = useAuthStore();
+  const { ready } = useRequireAuth();
   const [idempotencyKey] = useState(() => uuidv4());
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'VNPAY' | 'COD'>('COD');
@@ -110,12 +113,21 @@ export default function CheckoutPage() {
       }
     },
     onError: (err: unknown) => {
-      const ax = err as { response?: { data?: { message?: string } } };
-      toast.error(ax?.response?.data?.message ?? 'Đặt hàng thất bại, vui lòng thử lại');
+      toast.error(getApiErrorMessage(err, 'Đặt hàng thất bại, vui lòng thử lại'));
     },
   });
 
   const canPlaceOrder = !!selectedAddressId && !!preview?.allItemsValid && !previewLoading;
+
+  if (!ready) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-6 space-y-3">
+        <Skeleton className="h-8 w-40 bg-white/5" />
+        <Skeleton className="h-24 w-full rounded-lg bg-white/5" />
+        <Skeleton className="h-24 w-full rounded-lg bg-white/5" />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6">
