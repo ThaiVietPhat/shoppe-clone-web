@@ -69,9 +69,10 @@ export function canReviewOrder(status: OrderStatus): boolean {
   return status === 'DELIVERED' || status === 'COMPLETED';
 }
 
-// Mirrors backend Order.ship() precondition
-export function canShipOrder(paymentStatus: OrderPaymentStatus, fulfillmentStatus: FulfillmentStatus | null): boolean {
-  return paymentStatus === 'PAID' && fulfillmentStatus === 'READY_TO_SHIP';
+// Mirrors backend Order.ship() precondition — COD orders ship UNPAID (cash is
+// collected on delivery), so this only checks fulfillment readiness.
+export function canShipOrder(fulfillmentStatus: FulfillmentStatus | null): boolean {
+  return fulfillmentStatus === 'READY_TO_SHIP';
 }
 
 // Mirrors backend Order.deliver() precondition

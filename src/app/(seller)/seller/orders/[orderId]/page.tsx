@@ -76,9 +76,9 @@ export default function SellerOrderDetailPage({ params }: { params: Promise<{ or
         </div>
       </div>
 
-      {(canShipOrder(order.paymentStatus, order.fulfillmentStatus) || canDeliverOrder(order.fulfillmentStatus)) && (
+      {(canShipOrder(order.fulfillmentStatus) || canDeliverOrder(order.fulfillmentStatus)) && (
         <div className="flex gap-2 mb-4">
-          {canShipOrder(order.paymentStatus, order.fulfillmentStatus) && (
+          {canShipOrder(order.fulfillmentStatus) && (
             <Button className="bg-primary gap-1.5" disabled={ship.isPending} onClick={() => ship.mutate()}>
               {ship.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Truck className="h-4 w-4" /> Giao hàng</>}
             </Button>

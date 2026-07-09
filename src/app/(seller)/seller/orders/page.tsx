@@ -88,7 +88,7 @@ function SellerOrdersContent() {
                   <p className="text-sm font-bold text-primary mt-1">{formatPrice(o.totalAmount)}</p>
                 </Link>
                 <div className="flex items-center gap-2 shrink-0">
-                  {canShipOrder(o.paymentStatus, o.fulfillmentStatus) && (
+                  {canShipOrder(o.fulfillmentStatus) && (
                     <Button size="sm" className="bg-primary gap-1.5 text-xs" onClick={() => setShipOrder(o.orderId)}>
                       <Truck className="h-3.5 w-3.5" /> Giao hàng
                     </Button>
