@@ -143,15 +143,7 @@ function LoginForm() {
           </div>
 
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password" className="text-sm text-foreground/80">Mật khẩu</Label>
-              <button
-                type="button"
-                className="text-xs text-primary hover:text-primary/80 transition-colors"
-              >
-                Quên mật khẩu?
-              </button>
-            </div>
+            <Label htmlFor="password" className="text-sm text-foreground/80">Mật khẩu</Label>
             <div className="relative">
               <Input
                 id="password"

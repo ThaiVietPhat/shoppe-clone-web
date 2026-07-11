@@ -2,27 +2,46 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useMutation } from '@tanstack/react-query';
-import { Loader2, Store } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Check, Loader2, MapPin, Plus, Store } from 'lucide-react';
 import { api, setAccessToken } from '@/lib/api';
 import { getApiErrorMessage } from '@/lib/error';
 import { useAuthStore } from '@/stores/auth.store';
-import { CurrentUserResponse } from '@/types/api';
+import { Address, CurrentUserResponse } from '@/types/api';
 import { toStoreUser } from '@/lib/user';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
+import { AddressDialog } from '@/components/address/AddressDialog';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export default function BecomeSellerPage() {
   const router = useRouter();
+  const qc = useQueryClient();
   const { setUser } = useAuthStore();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedAddressId, setSelectedAddressId] = useState<string>('');
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const { data: addresses, isLoading: addrLoading } = useQuery({
+    queryKey: ['addresses'],
+    queryFn: async () => {
+      const { data } = await api.get<{ data: Address[] }>('/api/addresses');
+      const list = data.data;
+      const def = list.find((a) => a.isDefault) ?? list[0];
+      if (def && !selectedAddressId) setSelectedAddressId(def.id);
+      return list;
+    },
+  });
+
+  const invalidateAddresses = () => qc.invalidateQueries({ queryKey: ['addresses'] });
 
   const createShop = useMutation({
-    mutationFn: () => api.post('/api/shops', { name, description: description || null }),
+    mutationFn: () => api.post('/api/shops', { name, description: description || null, addressId: selectedAddressId }),
     onSuccess: async () => {
       // The shop is already created at this point; refreshing the token just picks up the
       // new SELLER role sooner. If it fails here, the axios 401 interceptor will still pick
@@ -47,6 +66,7 @@ export default function BecomeSellerPage() {
 
   function handleSubmit() {
     if (name.trim().length < 3) return toast.error('Tên shop phải từ 3 ký tự trở lên');
+    if (!selectedAddressId) return toast.error('Vui lòng chọn địa chỉ shop');
     createShop.mutate();
   }
 
@@ -81,10 +101,67 @@ export default function BecomeSellerPage() {
             onChange={(e) => setDescription(e.target.value)}
           />
         </div>
+
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs text-foreground/80 flex items-center gap-1.5">
+              <MapPin className="h-3.5 w-3.5 text-primary" /> Địa chỉ shop
+            </Label>
+            <Button variant="ghost" size="sm" className="text-primary gap-1 text-xs h-auto py-1" onClick={() => setDialogOpen(true)}>
+              <Plus className="h-3.5 w-3.5" /> Thêm địa chỉ
+            </Button>
+          </div>
+
+          {addrLoading ? (
+            <Skeleton className="h-16 w-full rounded-lg bg-white/5" />
+          ) : !addresses || addresses.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-2">Chưa có địa chỉ. Vui lòng thêm địa chỉ shop.</p>
+          ) : (
+            <div className="space-y-2">
+              {addresses.map((a) => (
+                <button
+                  key={a.id}
+                  onClick={() => setSelectedAddressId(a.id)}
+                  className={cn(
+                    'flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors',
+                    selectedAddressId === a.id
+                      ? 'border-primary bg-primary/5'
+                      : 'border-white/10 hover:border-white/20'
+                  )}
+                >
+                  <div className={cn(
+                    'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border',
+                    selectedAddressId === a.id ? 'border-primary bg-primary' : 'border-white/30'
+                  )}>
+                    {selectedAddressId === a.id && <Check className="h-3 w-3 text-primary-foreground" />}
+                  </div>
+                  <div className="text-sm min-w-0">
+                    <p className="font-medium text-foreground">
+                      {a.recipientName} <span className="text-muted-foreground font-normal">· {a.phone}</span>
+                    </p>
+                    <p className="text-muted-foreground mt-0.5">
+                      {a.addressLine}, {a.wardName}, {a.districtName}, {a.provinceName}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <Button className="bg-primary gap-1.5 w-full" disabled={createShop.isPending} onClick={handleSubmit}>
           {createShop.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Tạo shop'}
         </Button>
       </div>
+
+      <AddressDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSaved={(addr) => {
+          invalidateAddresses();
+          setSelectedAddressId(addr.id);
+        }}
+      />
     </div>
   );
 }

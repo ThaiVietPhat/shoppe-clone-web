@@ -76,14 +76,13 @@ export default function NewProductPage() {
     if (!shopId) return toast.error('Không tìm thấy shop của bạn');
     if (!name.trim()) return toast.error('Nhập tên sản phẩm');
     if (!categoryId) return toast.error('Chọn danh mục');
-    if (!cover) return toast.error('Tải ảnh bìa');
     if (variants.some((v) => !v.sku.trim() || !v.name.trim() || !v.price)) {
       return toast.error('Nhập đầy đủ tên, SKU và giá cho mỗi phiên bản');
     }
 
     setSubmitting(true);
     try {
-      const mediaIds = [cover.mediaId, ...gallery.filter((g): g is Media => !!g).map((g) => g.mediaId)];
+      const mediaIds = [cover, ...gallery].filter((g): g is Media => !!g).map((g) => g.mediaId);
 
       const { data: created } = await api.post<{ data: { id: string } }>('/api/products', {
         shopId, name, description, brand: brand || null, categoryId,

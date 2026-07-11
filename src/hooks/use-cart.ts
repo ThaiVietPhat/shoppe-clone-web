@@ -31,7 +31,7 @@ export function useCartMutations() {
 
   const updateQuantity = useMutation({
     mutationFn: (vars: { variantId: string; quantity: number }) =>
-      api.put(`/api/cart/items/${vars.variantId}`, { quantity: vars.quantity }),
+      api.patch(`/api/cart/items/${vars.variantId}`, { quantity: vars.quantity }),
     onSuccess: invalidate,
   });
 

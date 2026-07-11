@@ -136,6 +136,7 @@ export interface ShopDetail {
   id: string;
   ownerId: string;
   name: string;
+  address: Address | null;
   description: string | null;
   logo: { publicUrl: string } | null;
   rating: number;

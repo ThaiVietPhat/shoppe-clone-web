@@ -15,6 +15,7 @@ import {
   LogOut,
   LayoutDashboard,
   Star,
+  MonitorX,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,12 +72,28 @@ export function Header() {
   async function handleLogout() {
     try {
       await api.post('/api/auth/logout');
-    } catch {
-      // ignore
+    } catch (err) {
+      // Client state is cleared below regardless, but if this call failed the
+      // refresh-token cookie was never revoked/cleared server-side — surface it
+      // instead of pretending logout fully succeeded.
+      console.error('Logout request failed; session may not be fully revoked', err);
+      toast.warning('Đăng xuất chưa hoàn tất trên máy chủ, vui lòng thử lại nếu vẫn thấy đăng nhập.');
     }
     logout();
     router.push('/login');
     toast.success('Đã đăng xuất');
+  }
+
+  async function handleLogoutAll() {
+    try {
+      await api.post('/api/auth/logout-all');
+    } catch (err) {
+      console.error('Logout-all request failed; sessions may not be fully revoked', err);
+      toast.warning('Đăng xuất chưa hoàn tất trên máy chủ, vui lòng thử lại nếu vẫn thấy đăng nhập.');
+    }
+    logout();
+    router.push('/login');
+    toast.success('Đã đăng xuất khỏi tất cả thiết bị');
   }
 
   return (
@@ -271,6 +288,13 @@ export function Header() {
                     >
                       <LogOut className="h-4 w-4" />
                       Đăng xuất
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={handleLogoutAll}
+                    >
+                      <MonitorX className="h-4 w-4" />
+                      Đăng xuất tất cả thiết bị
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

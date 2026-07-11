@@ -14,6 +14,20 @@ function CsrfInit() {
   const setUser = useAuthStore((s) => s.setUser);
 
   useEffect(() => {
+    // Runs once per real page load (mount), not on every client-side route change —
+    // deliberately NOT reactive to pathname, since re-running this on every SPA
+    // navigation would re-hit /api/auth/refresh repeatedly (rotating the refresh
+    // token each time) for no reason.
+    //
+    // /oauth2/redirect resolves its own session on this same page load (exchange code →
+    // login). Running the silent bootstrap refresh here too would race it — whichever
+    // finishes last wins — and can silently overwrite the just-completed login with
+    // whatever account the (possibly stale) refresh-token cookie belongs to.
+    if (window.location.pathname.startsWith('/oauth2/redirect')) {
+      setHydrated();
+      return;
+    }
+
     async function bootstrap() {
       await api.get('/api/auth/csrf').catch(() => {});
       // Access token chỉ sống trong memory nên mất sau mỗi lần reload —
@@ -29,7 +43,8 @@ function CsrfInit() {
       setHydrated();
     }
     bootstrap();
-  }, [setHydrated, setUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally mount-only, see comment above
+  }, []);
 
   return null;
 }
@@ -39,7 +54,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <CsrfInit />
       {children}
-      <Toaster theme="dark" position="top-right" richColors />
+      {/* bottom-right so stacked toasts never sit over the header's account/login controls */}
+      <Toaster theme="dark" position="bottom-right" richColors />
     </QueryClientProvider>
   );
 }
