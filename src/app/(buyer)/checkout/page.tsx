@@ -65,7 +65,7 @@ export default function CheckoutPage() {
     onError: () => toast.error('Không thể đặt làm mặc định'),
   });
 
-  const { data: preview, isFetching: previewLoading } = useQuery({
+  const { data: preview, isFetching: previewLoading, error: previewError } = useQuery({
     queryKey: ['checkout-preview', selectedAddressId],
     queryFn: async () => {
       const { data } = await api.post<{ data: CheckoutPreview }>('/api/orders/preview', {
@@ -74,6 +74,7 @@ export default function CheckoutPage() {
       return data.data;
     },
     enabled: !!selectedAddressId,
+    retry: false,
   });
 
   const placeOrder = useMutation({
@@ -193,6 +194,16 @@ export default function CheckoutPage() {
             <Skeleton className="h-24 w-full rounded-lg bg-white/5" />
           ) : !selectedAddressId ? (
             <p className="text-sm text-muted-foreground">Chọn địa chỉ để xem chi tiết đơn hàng.</p>
+          ) : previewError ? (
+            <div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <div>
+                <p>{getApiErrorMessage(previewError, 'Không thể tải thông tin đơn hàng, vui lòng thử lại')}</p>
+                <Button variant="link" className="h-auto p-0 text-destructive underline" onClick={() => router.push('/cart')}>
+                  Quay lại giỏ hàng
+                </Button>
+              </div>
+            </div>
           ) : preview ? (
             <div className="space-y-4">
               {preview.shops.map((g) => (
