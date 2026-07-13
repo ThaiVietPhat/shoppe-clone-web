@@ -366,7 +366,7 @@ export default function ProductDetailPage({
           {/* Trust badges */}
           <div className="grid grid-cols-3 gap-3 pt-2">
             {[
-              { icon: Shield, label: 'Chính hàng 100%' },
+              { icon: Shield, label: 'Chính hãng 100%' },
               { icon: Truck, label: 'Giao hàng nhanh' },
               { icon: RotateCcw, label: 'Đổi trả dễ dàng' },
             ].map(({ icon: Icon, label }) => (

@@ -7,10 +7,6 @@ import { Search as SearchIcon, SlidersHorizontal, AlertTriangle, Sparkles } from
 import { api } from '@/lib/api';
 import { SearchResult, ProductCardResponse } from '@/types/api';
 import { pageFrom, PagedResponse } from '@/lib/page';
-
-// Backend SearchResponse nests the page under `products`, not flat at the top level.
-type RawSearch = { products: PagedResponse<ProductCardResponse>; degraded: boolean; degradedReason: string | null };
-const toSearchResult = (d: RawSearch): SearchResult => ({ ...pageFrom(d.products), degraded: d.degraded, degradedReason: d.degradedReason });
 import { ProductCard } from '@/components/product/ProductCard';
 import { ProductCardSkeleton } from '@/components/product/ProductCardSkeleton';
 import { Pagination } from '@/components/shared/Pagination';
@@ -18,6 +14,10 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+
+// Backend SearchResponse nests the page under `products`, not flat at the top level.
+type RawSearch = { products: PagedResponse<ProductCardResponse>; degraded: boolean; degradedReason: string | null };
+const toSearchResult = (d: RawSearch): SearchResult => ({ ...pageFrom(d.products), degraded: d.degraded, degradedReason: d.degradedReason });
 
 // Backend chỉ hỗ trợ 3 giá trị này (ProductSortOrder) — không có sort theo soldCount/rating.
 const SORT_OPTIONS = [
