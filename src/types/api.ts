@@ -569,3 +569,42 @@ export interface Report {
   resolvedAt: string | null;
   createdAt: string;
 }
+
+// Wallet
+// Matches com.shopee.monolith.modules.wallet.dto.response.WalletResponse
+export interface WalletResponse {
+  walletId: string;
+  balance: number;
+}
+
+export type WalletTransactionType = 'SELLER_EARNING' | 'RETURN_REFUND' | 'RETURN_CLAWBACK' | 'WITHDRAWAL';
+export type WalletReferenceType = 'ORDER' | 'RETURN' | 'PAYOUT';
+
+// Matches com.shopee.monolith.modules.wallet.dto.response.WalletTransactionResponse
+export interface WalletTransaction {
+  id: string;
+  type: WalletTransactionType;
+  amount: number;
+  referenceType: WalletReferenceType;
+  referenceId: string;
+  createdAt: string;
+}
+
+// Return / Dispute
+export type ReturnReasonCategory = 'DEFECTIVE' | 'WRONG_ITEM' | 'NOT_AS_DESCRIBED' | 'CHANGED_MIND' | 'OTHER';
+export type ReturnStatus = 'REQUESTED' | 'APPROVED' | 'REJECTED';
+
+// Matches com.shopee.monolith.modules.order.dto.response.ReturnResponse
+export interface ReturnRequestDetail {
+  id: string;
+  orderId: string;
+  buyerId: string;
+  reasonCategory: ReturnReasonCategory;
+  description: string | null;
+  status: ReturnStatus;
+  refundAmount: number | null;
+  resolutionNote: string | null;
+  resolvedAt: string | null;
+  requestedAt: string;
+  evidenceMediaIds: string[];
+}

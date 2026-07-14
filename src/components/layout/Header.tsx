@@ -16,6 +16,7 @@ import {
   LayoutDashboard,
   Star,
   MonitorX,
+  Heart,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -254,6 +255,10 @@ export function Header() {
                     <DropdownMenuItem onClick={() => router.push('/reviews')}>
                       <Star className="h-4 w-4" />
                       Đánh giá của tôi
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push('/wishlist')}>
+                      <Heart className="h-4 w-4" />
+                      Sản phẩm yêu thích
                     </DropdownMenuItem>
                     {user.role === 'SELLER' && (
                       <>

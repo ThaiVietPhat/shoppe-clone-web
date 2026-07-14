@@ -1,12 +1,12 @@
 'use client';
 
 import { use, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
   Star, ShoppingCart, MessageCircle, Store, ChevronRight,
-  Minus, Plus, Shield, Truck, RotateCcw, ZoomIn, Flag,
+  Minus, Plus, Shield, Truck, RotateCcw, ZoomIn, Flag, Heart,
 } from 'lucide-react';
 import { ReportDialog } from '@/components/shared/ReportDialog';
 import { Button } from '@/components/ui/button';
@@ -56,6 +56,28 @@ export default function ProductDetailPage({
       return { ...pageFrom(data.data.reviews), ratingAvg: data.data.ratingAvg, ratingCount: data.data.ratingCount };
     },
     enabled: !!product,
+  });
+
+  const { data: wishlistStatus } = useQuery({
+    queryKey: ['wishlist-status', productId],
+    queryFn: async () => {
+      const { data } = await api.post<{ data: Record<string, boolean> }>('/api/wishlist/check', {
+        productIds: [productId],
+      });
+      return data.data[productId] ?? false;
+    },
+    enabled: !!user,
+  });
+
+  const toggleWishlist = useMutation({
+    mutationFn: () => (wishlistStatus
+      ? api.delete(`/api/wishlist/${productId}`)
+      : api.post(`/api/wishlist/${productId}`)),
+    onSuccess: () => {
+      toast.success(wishlistStatus ? 'Đã bỏ khỏi yêu thích' : 'Đã thêm vào yêu thích');
+      qc.invalidateQueries({ queryKey: ['wishlist-status', productId] });
+    },
+    onError: () => toast.error('Thao tác thất bại'),
   });
 
   // Build option groups từ variants (optionLabels là map name -> value cho mỗi variant)
@@ -225,13 +247,27 @@ export default function ProductDetailPage({
                 )}
                 <h1 className="text-xl font-bold text-foreground leading-snug">{product.name}</h1>
               </div>
-              <button
-                onClick={() => setReportOpen(true)}
-                className="flex items-center gap-1 shrink-0 text-xs text-muted-foreground hover:text-destructive transition-colors"
-                title="Báo cáo sản phẩm"
-              >
-                <Flag className="h-3.5 w-3.5" /> Báo cáo
-              </button>
+              <div className="flex items-center gap-3 shrink-0">
+                <button
+                  onClick={() => toggleWishlist.mutate()}
+                  disabled={toggleWishlist.isPending}
+                  className={cn(
+                    'flex items-center gap-1 text-xs transition-colors disabled:opacity-50',
+                    wishlistStatus ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'
+                  )}
+                  title={wishlistStatus ? 'Bỏ khỏi yêu thích' : 'Thêm vào yêu thích'}
+                >
+                  <Heart className={cn('h-3.5 w-3.5', wishlistStatus && 'fill-red-500')} />
+                  {wishlistStatus ? 'Đã yêu thích' : 'Yêu thích'}
+                </button>
+                <button
+                  onClick={() => setReportOpen(true)}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                  title="Báo cáo sản phẩm"
+                >
+                  <Flag className="h-3.5 w-3.5" /> Báo cáo
+                </button>
+              </div>
             </div>
 
             {reviewsData && reviewsData.ratingCount > 0 && (

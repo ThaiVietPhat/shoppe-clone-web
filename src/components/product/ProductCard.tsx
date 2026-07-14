@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Star, ShoppingCart } from 'lucide-react';
+import { Star, ShoppingCart, Heart } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn, formatPrice, formatPriceRange } from '@/lib/utils';
@@ -15,11 +15,19 @@ import { toast } from 'sonner';
 interface ProductCardProps {
   product: ProductCardResponse;
   className?: string;
+  wishlisted?: boolean;
+  onWishlistChange?: (productId: string, wishlisted: boolean) => void;
 }
 
-export function ProductCard({ product, className }: ProductCardProps) {
+export function ProductCard({ product, className, wishlisted, onWishlistChange }: ProductCardProps) {
   const { user } = useAuthStore();
   const [imageFailed, setImageFailed] = useState(false);
+  const [localWishlisted, setLocalWishlisted] = useState(wishlisted ?? false);
+  const [wishlistPending, setWishlistPending] = useState(false);
+
+  useEffect(() => {
+    if (wishlisted !== undefined) setLocalWishlisted(wishlisted);
+  }, [wishlisted]);
 
   async function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault();
@@ -29,6 +37,31 @@ export function ProductCard({ product, className }: ProductCardProps) {
     }
     // Navigate to product detail for variant selection
     window.location.href = `/products/${product.id}`;
+  }
+
+  async function handleToggleWishlist(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) {
+      toast.error('Vui lòng đăng nhập để lưu sản phẩm yêu thích');
+      return;
+    }
+    if (wishlistPending) return;
+    setWishlistPending(true);
+    const next = !localWishlisted;
+    try {
+      if (next) {
+        await api.post(`/api/wishlist/${product.id}`);
+      } else {
+        await api.delete(`/api/wishlist/${product.id}`);
+      }
+      setLocalWishlisted(next);
+      onWishlistChange?.(product.id, next);
+    } catch {
+      toast.error('Thao tác thất bại');
+    } finally {
+      setWishlistPending(false);
+    }
   }
 
   const imageUrl = imageFailed ? null : product.coverImageUrl;
@@ -59,6 +92,16 @@ export function ProductCard({ product, className }: ProductCardProps) {
             <ShoppingCart className="h-10 w-10" />
           </div>
         )}
+
+        <button
+          type="button"
+          onClick={handleToggleWishlist}
+          disabled={wishlistPending}
+          title={localWishlisted ? 'Bỏ khỏi yêu thích' : 'Thêm vào yêu thích'}
+          className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors disabled:opacity-50"
+        >
+          <Heart className={cn('h-4 w-4', localWishlisted ? 'fill-red-500 text-red-500' : 'text-white')} />
+        </button>
 
         {!product.checkoutEligible && (
           <div className="absolute inset-0 bg-black/60 flex items-center justify-center">

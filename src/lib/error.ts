@@ -79,6 +79,16 @@ const ERROR_MESSAGE_VI: Record<string, string> = {
   'File size exceeds the maximum allowed limit': 'Kích thước file vượt quá giới hạn cho phép',
   'Media asset not found': 'Không tìm thấy tệp media',
   'Media asset does not belong to this shop': 'Tệp media không thuộc shop này',
+
+  'Withdraw amount exceeds available wallet balance': 'Số tiền rút vượt quá số dư ví',
+
+  'Return request not found': 'Không tìm thấy yêu cầu trả hàng',
+  'This order already has a return request': 'Đơn hàng này đã có yêu cầu trả hàng',
+  'Order is not eligible for a return request': 'Đơn hàng không đủ điều kiện để yêu cầu trả hàng',
+  'Return window has expired for this order': 'Đã hết thời hạn yêu cầu trả hàng cho đơn này',
+  'Return request is not in a state that allows this action': 'Yêu cầu trả hàng không ở trạng thái cho phép thao tác này',
+
+  'Product is already in the wishlist': 'Sản phẩm đã có trong danh sách yêu thích',
 };
 
 /** Dịch message lỗi backend (tiếng Anh) sang tiếng Việt; message lạ dùng fallback theo ngữ cảnh. */

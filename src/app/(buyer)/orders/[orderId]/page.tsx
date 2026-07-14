@@ -3,10 +3,10 @@
 import { use, useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Package, MapPin, ChevronLeft, Loader2, Star, CheckCircle2 } from 'lucide-react';
+import { Package, MapPin, ChevronLeft, Loader2, Star, CheckCircle2, RotateCcw } from 'lucide-react';
 import { api } from '@/lib/api';
 import { getApiErrorMessage } from '@/lib/error';
-import { OrderDetail } from '@/types/api';
+import { OrderDetail, ReturnRequestDetail } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,11 +16,24 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { ReviewDialog } from '@/components/order/ReviewDialog';
+import { ReturnRequestDialog } from '@/components/order/ReturnRequestDialog';
 import { formatPrice, formatDateTime, cn } from '@/lib/utils';
 import { ORDER_STATUS_LABEL, ORDER_STATUS_CLASS, TIMELINE_EVENT_LABEL, canCancelOrder, canReviewOrder } from '@/lib/orderStatus';
 import { useAuthStore } from '@/stores/auth.store';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { toast } from 'sonner';
+
+const RETURN_STATUS_LABEL: Record<string, string> = {
+  REQUESTED: 'Đang chờ shop xử lý',
+  APPROVED: 'Đã chấp nhận — tiền đã hoàn vào ví',
+  REJECTED: 'Đã bị từ chối',
+};
+
+const RETURN_STATUS_CLASS: Record<string, string> = {
+  REQUESTED: 'bg-amber-500/15 text-amber-400 border-amber-500/20',
+  APPROVED: 'bg-green-500/15 text-green-400 border-green-500/20',
+  REJECTED: 'bg-destructive/15 text-destructive border-destructive/20',
+};
 
 export default function OrderDetailPage({ params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = use(params);
@@ -30,6 +43,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [reviewItem, setReviewItem] = useState<{ orderItemId: string; productName: string } | null>(null);
+  const [returnOpen, setReturnOpen] = useState(false);
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['order', orderId],
@@ -38,6 +52,15 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
       return data.data;
     },
     enabled: !!user,
+  });
+
+  const { data: returnRequest } = useQuery({
+    queryKey: ['order-return', orderId],
+    queryFn: async () => {
+      const { data } = await api.get<{ data: ReturnRequestDetail | null }>(`/api/buyer/orders/${orderId}/return`);
+      return data.data;
+    },
+    enabled: !!user && order?.status === 'DELIVERED',
   });
 
   const cancel = useMutation({
@@ -158,6 +181,31 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
         </Button>
       )}
 
+      {/* Return/refund */}
+      {order.status === 'DELIVERED' && (
+        returnRequest ? (
+          <div className="rounded-xl border border-white/8 bg-card p-5 mb-4">
+            <div className="flex items-center gap-2 mb-1">
+              <RotateCcw className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-semibold text-foreground">Yêu cầu trả hàng/hoàn tiền</h2>
+              <Badge className={cn('text-[11px] border ml-auto', RETURN_STATUS_CLASS[returnRequest.status])}>
+                {RETURN_STATUS_LABEL[returnRequest.status] ?? returnRequest.status}
+              </Badge>
+            </div>
+            {returnRequest.refundAmount != null && (
+              <p className="text-sm font-bold text-primary mt-2">Số tiền hoàn: {formatPrice(returnRequest.refundAmount)}</p>
+            )}
+            {returnRequest.resolutionNote && (
+              <p className="text-xs text-muted-foreground mt-1 italic">Ghi chú từ shop: {returnRequest.resolutionNote}</p>
+            )}
+          </div>
+        ) : (
+          <Button variant="outline" className="w-full border-primary/40 text-primary hover:bg-primary/10 gap-1.5" onClick={() => setReturnOpen(true)}>
+            <RotateCcw className="h-4 w-4" /> Yêu cầu trả hàng/hoàn tiền
+          </Button>
+        )
+      )}
+
       {/* Cancel dialog */}
       <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
         <DialogContent className="bg-card border-white/10">
@@ -174,6 +222,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ReturnRequestDialog open={returnOpen} onOpenChange={setReturnOpen} orderId={orderId} />
 
       {reviewItem && (
         <ReviewDialog

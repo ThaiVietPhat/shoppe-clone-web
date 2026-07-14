@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 // Matches backend com.shopee.monolith.modules.media.dto.internal.MediaPurposeCode
-type Purpose = 'PRODUCT_IMAGE' | 'SHOP_LOGO' | 'AVATAR';
+type Purpose = 'PRODUCT_IMAGE' | 'SHOP_LOGO' | 'AVATAR' | 'RETURN_EVIDENCE';
 type OwnerType = 'SHOP' | 'USER';
 
 const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp'];

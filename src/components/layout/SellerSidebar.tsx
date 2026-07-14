@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Package, ClipboardList, Settings, Plus } from 'lucide-react';
+import { LayoutDashboard, Package, ClipboardList, Settings, Plus, Wallet, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV = [
@@ -10,6 +10,8 @@ const NAV = [
   { href: '/seller/products', label: 'Sản phẩm', icon: Package },
   { href: '/seller/products/new', label: 'Thêm sản phẩm', icon: Plus },
   { href: '/seller/orders', label: 'Đơn hàng', icon: ClipboardList },
+  { href: '/seller/returns', label: 'Trả hàng/Hoàn tiền', icon: RotateCcw },
+  { href: '/seller/wallet', label: 'Ví', icon: Wallet },
   { href: '/seller/shop/settings', label: 'Cài đặt shop', icon: Settings },
 ];
 
