@@ -144,6 +144,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
       <div className="rounded-xl border border-white/8 bg-card p-5 mb-4 space-y-2 text-sm">
         <div className="flex justify-between"><span className="text-muted-foreground">Tạm tính</span><span>{formatPrice(order.itemsSubtotal)}</span></div>
         <div className="flex justify-between"><span className="text-muted-foreground">Phí vận chuyển</span><span>{formatPrice(order.shippingFee)}</span></div>
+        {!!order.discountAmount && (
+          <div className="flex justify-between"><span className="text-muted-foreground">Giảm giá</span><span>-{formatPrice(order.discountAmount)}</span></div>
+        )}
         <Separator className="bg-white/8" />
         <div className="flex justify-between text-base font-bold"><span>Tổng cộng</span><span className="text-primary">{formatPrice(order.totalAmount)}</span></div>
         <p className="text-xs text-muted-foreground pt-1">Thanh toán: {order.paymentMethod ?? '—'} · {order.paymentStatus}</p>

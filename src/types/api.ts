@@ -320,6 +320,7 @@ export interface OrderDetail {
   itemsSubtotal: number;
   shippingFee: number;
   totalAmount: number;
+  discountAmount: number | null;
   shippingRecipientName: string;
   shippingPhone: string;
   shippingAddressLine: string;
@@ -474,6 +475,7 @@ export interface SellerOrderDetail {
   itemsSubtotal: number;
   shippingFee: number;
   totalAmount: number;
+  discountAmount: number | null;
   shippingRecipientName: string;
   shippingPhone: string;
   shippingAddressLine: string;
