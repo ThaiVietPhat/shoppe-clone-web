@@ -3,7 +3,7 @@
 import { use, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
-import { Store, Star, Package, MessageCircle } from 'lucide-react';
+import { Store, Star, Package, MessageCircle, Flag } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { ProductCardResponse, ShopDetail } from '@/types/api';
@@ -12,6 +12,7 @@ import { ProductCard } from '@/components/product/ProductCard';
 import { ProductCardSkeleton } from '@/components/product/ProductCardSkeleton';
 import { Pagination } from '@/components/shared/Pagination';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { ReportDialog } from '@/components/shared/ReportDialog';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthStore } from '@/stores/auth.store';
@@ -23,6 +24,7 @@ export default function ShopPage({ params }: { params: Promise<{ shopId: string 
   const { user } = useAuthStore();
   const qc = useQueryClient();
   const [page, setPage] = useState(0);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const { data: shop, isLoading: shopLoading } = useQuery({
     queryKey: ['shop', shopId],
@@ -83,13 +85,26 @@ export default function ShopPage({ params }: { params: Promise<{ shopId: string 
                 </span>
               </div>
             </div>
-            <Button variant="outline" className="border-white/10 gap-2" onClick={handleChat}>
-              <MessageCircle className="h-4 w-4" /> Chat với shop
-            </Button>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button variant="outline" className="border-white/10 gap-2" onClick={handleChat}>
+                <MessageCircle className="h-4 w-4" /> Chat với shop
+              </Button>
+              <button
+                onClick={() => setReportOpen(true)}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors px-2"
+                title="Báo cáo shop"
+              >
+                <Flag className="h-3.5 w-3.5" /> Báo cáo
+              </button>
+            </div>
           </div>
         </div>
       ) : (
         <EmptyState icon={Store} title="Không tìm thấy shop" />
+      )}
+
+      {shop && (
+        <ReportDialog open={reportOpen} onOpenChange={setReportOpen} targetType="SHOP" targetId={shop.id} />
       )}
 
       {/* Products */}

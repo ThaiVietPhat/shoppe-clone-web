@@ -28,6 +28,8 @@ export default function CheckoutPage() {
   const [idempotencyKey] = useState(() => uuidv4());
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'VNPAY' | 'COD'>('COD');
+  const [voucherInput, setVoucherInput] = useState('');
+  const [voucherCode, setVoucherCode] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
   const [deletingAddressId, setDeletingAddressId] = useState<string | null>(null);
@@ -66,10 +68,11 @@ export default function CheckoutPage() {
   });
 
   const { data: preview, isFetching: previewLoading, error: previewError } = useQuery({
-    queryKey: ['checkout-preview', selectedAddressId],
+    queryKey: ['checkout-preview', selectedAddressId, voucherCode],
     queryFn: async () => {
       const { data } = await api.post<{ data: CheckoutPreview }>('/api/orders/preview', {
         addressId: selectedAddressId,
+        voucherCode: voucherCode || undefined,
       });
       return data.data;
     },
@@ -81,7 +84,7 @@ export default function CheckoutPage() {
     mutationFn: async () => {
       const { data: checkoutRes } = await api.post<{ data: CheckoutResponse }>(
         '/api/orders',
-        { addressId: selectedAddressId },
+        { addressId: selectedAddressId, voucherCode: voucherCode || undefined },
         { headers: { 'Idempotency-Key': idempotencyKey } }
       );
       const { data: paymentRes } = await api.post<{ data: PaymentStatusResponse }>(
@@ -276,12 +279,51 @@ export default function CheckoutPage() {
           </div>
         </section>
 
+        {/* Voucher */}
+        <section className="rounded-xl border border-white/8 bg-card p-5">
+          <h2 className="text-sm font-semibold text-foreground mb-3">Mã giảm giá</h2>
+          <div className="flex gap-2">
+            <input
+              value={voucherInput}
+              onChange={(e) => setVoucherInput(e.target.value)}
+              placeholder="Nhập mã giảm giá"
+              className="flex-1 h-9 rounded-md border border-white/10 bg-white/5 px-3 text-sm uppercase placeholder:normal-case focus-visible:ring-1 focus-visible:ring-primary/50 outline-none"
+            />
+            {voucherCode ? (
+              <Button
+                variant="outline"
+                className="border-white/10"
+                onClick={() => { setVoucherCode(''); setVoucherInput(''); }}
+              >
+                Huỷ
+              </Button>
+            ) : (
+              <Button
+                className="bg-primary"
+                disabled={!voucherInput.trim()}
+                onClick={() => setVoucherCode(voucherInput.trim())}
+              >
+                Áp dụng
+              </Button>
+            )}
+          </div>
+          {preview?.voucherError && (
+            <p className="text-xs text-destructive mt-2">{preview.voucherError}</p>
+          )}
+          {preview?.discountAmount != null && preview.discountAmount > 0 && (
+            <p className="text-xs text-primary mt-2">Đã áp dụng mã &quot;{voucherCode}&quot; — giảm {formatPrice(preview.discountAmount)}</p>
+          )}
+        </section>
+
         {/* Total + place order */}
         <section className="rounded-xl border border-white/8 bg-card p-5">
           {preview && (
             <div className="space-y-2 mb-4 text-sm">
               <div className="flex justify-between"><span className="text-muted-foreground">Tạm tính</span><span>{formatPrice(preview.totalItemsSubtotal)}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Phí vận chuyển</span><span>{formatPrice(preview.totalShippingFee)}</span></div>
+              {preview.discountAmount != null && preview.discountAmount > 0 && (
+                <div className="flex justify-between text-primary"><span>Giảm giá</span><span>-{formatPrice(preview.discountAmount)}</span></div>
+              )}
               <div className="flex justify-between pt-2 border-t border-white/8 text-base font-bold">
                 <span>Tổng cộng</span><span className="text-primary">{formatPrice(preview.grandTotal)}</span>
               </div>

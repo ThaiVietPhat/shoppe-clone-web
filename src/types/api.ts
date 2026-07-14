@@ -225,6 +225,8 @@ export interface CheckoutPreview {
   allItemsValid: boolean;
   addressId: string;
   cartVersion: number;
+  discountAmount: number | null;
+  voucherError: string | null;
 }
 
 // Matches com.shopee.monolith.modules.order.dto.response.CheckoutResponse (POST /api/orders)
@@ -236,6 +238,7 @@ export interface CheckoutResponse {
   shippingFee: number;
   totalAmount: number;
   expiresAt: string;
+  discountAmount: number | null;
 }
 
 // Matches com.shopee.monolith.modules.payment.dto.response.PaymentStatusResponse
@@ -500,4 +503,67 @@ export interface MediaUploadResponse {
   contentType: string;
   sizeBytes: number;
   purpose: string;
+}
+
+// Admin
+
+// Matches com.shopee.monolith.modules.admin.dto.response.AdminUserResponse
+export interface AdminUser {
+  id: string;
+  email: string;
+  role: 'BUYER' | 'SELLER' | 'ADMIN';
+  status: 'PENDING_VERIFICATION' | 'ACTIVE' | 'INACTIVE' | 'LOCKED';
+  createdAt: string;
+}
+
+// Matches com.shopee.monolith.modules.admin.dto.response.AdminShopResponse
+export interface AdminShop {
+  id: string;
+  ownerId: string;
+  name: string;
+  status: 'ACTIVE' | 'SUSPENDED';
+  verified: boolean;
+  createdAt: string;
+}
+
+// Voucher
+
+export type DiscountType = 'PERCENTAGE' | 'FIXED_AMOUNT';
+export type VoucherStatus = 'ACTIVE' | 'INACTIVE' | 'DELETED';
+
+// Matches com.shopee.monolith.modules.voucher.dto.response.VoucherResponse
+export interface Voucher {
+  id: string;
+  code: string;
+  discountType: DiscountType;
+  discountValue: number;
+  maxDiscountAmount: number | null;
+  minOrderAmount: number;
+  usageLimit: number | null;
+  usedCount: number;
+  startsAt: string;
+  expiresAt: string;
+  status: VoucherStatus;
+  createdAt: string;
+}
+
+// Moderation
+
+export type ReportTargetType = 'PRODUCT' | 'SHOP';
+export type ReportReasonCategory = 'COUNTERFEIT' | 'PROHIBITED' | 'MISLEADING' | 'ABUSE' | 'OTHER';
+export type ReportStatus = 'PENDING' | 'RESOLVED' | 'REJECTED';
+
+// Matches com.shopee.monolith.modules.moderation.dto.response.ReportResponse
+export interface Report {
+  id: string;
+  reporterId: string;
+  targetType: ReportTargetType;
+  targetId: string;
+  reasonCategory: ReportReasonCategory;
+  description: string | null;
+  status: ReportStatus;
+  resolutionNote: string | null;
+  resolvedBy: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
 }

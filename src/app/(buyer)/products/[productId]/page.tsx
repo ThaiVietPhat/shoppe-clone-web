@@ -6,8 +6,9 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
   Star, ShoppingCart, MessageCircle, Store, ChevronRight,
-  Minus, Plus, Shield, Truck, RotateCcw, ZoomIn,
+  Minus, Plus, Shield, Truck, RotateCcw, ZoomIn, Flag,
 } from 'lucide-react';
+import { ReportDialog } from '@/components/shared/ReportDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -36,6 +37,7 @@ export default function ProductDetailPage({
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', productId],
@@ -214,12 +216,23 @@ export default function ProductDetailPage({
         <div className="space-y-5">
           {/* Title & badges */}
           <div>
-            {product.brand && (
-              <p className="text-xs text-primary font-medium uppercase tracking-wider mb-1">
-                {product.brand}
-              </p>
-            )}
-            <h1 className="text-xl font-bold text-foreground leading-snug">{product.name}</h1>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                {product.brand && (
+                  <p className="text-xs text-primary font-medium uppercase tracking-wider mb-1">
+                    {product.brand}
+                  </p>
+                )}
+                <h1 className="text-xl font-bold text-foreground leading-snug">{product.name}</h1>
+              </div>
+              <button
+                onClick={() => setReportOpen(true)}
+                className="flex items-center gap-1 shrink-0 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                title="Báo cáo sản phẩm"
+              >
+                <Flag className="h-3.5 w-3.5" /> Báo cáo
+              </button>
+            </div>
 
             {reviewsData && reviewsData.ratingCount > 0 && (
               <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
@@ -525,6 +538,8 @@ export default function ProductDetailPage({
           </TabsContent>
         )}
       </Tabs>
+
+      <ReportDialog open={reportOpen} onOpenChange={setReportOpen} targetType="PRODUCT" targetId={productId} />
     </div>
   );
 }
