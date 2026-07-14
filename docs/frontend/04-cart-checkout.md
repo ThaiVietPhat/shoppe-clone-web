@@ -155,10 +155,10 @@ Gọi trước khi đặt hàng để hiển thị breakdown giá và validate. 
 
 ```http
 POST /api/orders/preview
-{ "addressId": "uuid" }
+{ "addressId": "uuid", "voucherCode": "WELCOME10" }
 ```
 
-Backend dùng các **selected items** trong cart hiện tại.
+`voucherCode` là optional/nullable (Task 8). Backend dùng các **selected items** trong cart hiện tại.
 
 Response (`CheckoutPreviewResponse`):
 ```json
@@ -191,8 +191,10 @@ Response (`CheckoutPreviewResponse`):
     "invalidItems": [],
     "totalItemsSubtotal": 50000000,
     "totalShippingFee": 30000,
-    "grandTotal": 50030000,
+    "discountAmount": 5000000,
+    "grandTotal": 45030000,
     "allItemsValid": true,
+    "voucherError": null,
     "addressId": "uuid",
     "cartVersion": 12
   }
@@ -207,6 +209,12 @@ Field đổi tên so với bản mô tả cũ:
 - `subtotal` (per shop) → **`itemsSubtotal`**, có thêm `shopTotal`
 - `subtotal` (tổng) → **`totalItemsSubtotal`**
 - `invalidReason` → **`invalidReasonCode`**
+
+### Voucher trong preview (Task 8) — best-effort, không fail cả request
+
+`discountAmount` và `voucherError` được tính từ `voucherCode` gửi lên. Nếu mã voucher sai/hết hạn/dưới `minOrderAmount`, backend **không throw lỗi cho cả preview** — nó set `discountAmount: 0` và `voucherError` là message giải thích (VD `"Đơn hàng chưa đạt giá trị tối thiểu để áp dụng mã"`), các field còn lại (`shops`, `totalItemsSubtotal`, `allItemsValid`...) vẫn tính đúng như không có voucher. FE hiển thị `voucherError` ngay cạnh ô nhập mã, **không** dùng nó làm điều kiện chặn nút đặt hàng — chỉ `allItemsValid === false` mới chặn.
+
+Voucher chỉ giảm trên `totalItemsSubtotal` (không áp dụng lên `totalShippingFee`) và giới hạn **1 voucher/checkout, admin tạo, platform-wide** — không có voucher riêng theo shop, không stacking nhiều mã cùng lúc.
 
 `invalidItems[]` dùng đúng shape `CheckoutPreviewItemResult` như item trong `shops[].items[]` ở trên (có `variantId`, `productName`, `invalidReasonCode`...) — không phải shape riêng với `availableStock`/`requestedQuantity`.
 
@@ -231,8 +239,10 @@ Khi `allItemsValid: false` → disable nút "Đặt hàng" và hiển thị lý 
 POST /api/orders
 Idempotency-Key: <uuid-v4>  ← TẠO MỘT LẦN, GIỮ LẠI ĐỂ RETRY
 
-{ "addressId": "uuid" }
+{ "addressId": "uuid", "voucherCode": "WELCOME10" }
 ```
+
+`voucherCode` optional (Task 8) — nên gửi đúng mã đã dùng ở bước preview để số tiền hiển thị khớp; backend luôn re-validate voucher lại theo tổng tiền cuối cùng tại thời điểm đặt hàng thật (không tin số đã tính ở preview), nên nếu voucher hết lượt/hết hạn giữa lúc preview và lúc đặt hàng, request này fail với lỗi voucher tương ứng (`VOUCHER_EXPIRED` / `VOUCHER_USAGE_LIMIT_REACHED` / `VOUCHER_NOT_FOUND` / `VOUCHER_MIN_ORDER_NOT_MET`) — hiển thị lỗi cho buyer, không âm thầm bỏ qua voucher và đặt hàng full giá.
 
 **Request KHÔNG có `paymentMethod`.** Response (`CheckoutResponse`) **KHÔNG có `paymentUrl` hay `paymentMethod`**:
 ```json
@@ -244,13 +254,16 @@ Idempotency-Key: <uuid-v4>  ← TẠO MỘT LẦN, GIỮ LẠI ĐỂ RETRY
     "status": "PENDING_PAYMENT",
     "itemsSubtotal": 50000000,
     "shippingFee": 30000,
-    "totalAmount": 50030000,
+    "discountAmount": 5000000,
+    "totalAmount": 45030000,
     "expiresAt": "2026-06-20T10:15:00Z"
   }
 }
 ```
 
 Đây là điểm gây nhầm lẫn lớn nhất trong toàn bộ tài liệu cũ: đặt hàng **không tự động khởi tạo thanh toán**. Response chỉ tạo order ở trạng thái `PENDING_PAYMENT` và trả về `checkoutSessionId`.
+
+`discountAmount` khi checkout có nhiều shop (nhiều `orderIds`) được backend chia tỷ lệ theo `itemsSubtotal` của từng order — order cuối cùng nhận phần dư làm tròn để tổng discount trên các order cộng lại luôn khớp chính xác với `discountAmount` cấp checkout. FE không cần tự chia, chỉ đọc `discountAmount` tổng ở response này; chi tiết theo từng order lấy ở `GET /api/buyer/orders/{orderId}` (xem [06-orders.md](06-orders.md)).
 
 ### Bước 2 — khởi tạo thanh toán (bắt buộc gọi tiếp)
 

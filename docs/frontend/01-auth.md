@@ -208,6 +208,55 @@ X-XSRF-TOKEN: <csrf-token>
 
 ---
 
+## Quên / Đặt lại mật khẩu (Task 8)
+
+### Bước 1 — yêu cầu link đặt lại
+
+```http
+POST /api/auth/forgot-password
+{ "email": "user@example.com" }
+```
+
+Response `200` **luôn luôn**, bất kể email có tồn tại trong hệ thống hay không — đây là thiết kế chống dò email (enumeration-safe), không phải bug. **Đừng suy luận "email tồn tại" từ response** — luôn hiển thị cùng một message trung lập kiểu "Nếu email tồn tại, chúng tôi đã gửi link đặt lại mật khẩu".
+
+Nếu tìm thấy user và user không bị khoá (`status != LOCKED`), backend gửi email chứa link dạng `https://your-frontend.vercel.app/reset-password?token=<raw-token>`. Token TTL 30 phút, chỉ dùng được 1 lần.
+
+### Bước 2 — đặt mật khẩu mới bằng token
+
+```http
+POST /api/auth/reset-password
+{ "token": "<raw-token-từ-query-string>", "newPassword": "NewStrongPass123!" }
+```
+
+Route FE: `/reset-password?token=xxx` đọc `token` từ query string (dùng `useSearchParams`, cần bọc trong `<Suspense>` ở Next.js App Router vì `useSearchParams` yêu cầu suspense boundary khi export tĩnh).
+
+Response lỗi thật (map theo `ErrorCode` backend):
+| Code | Ý nghĩa |
+|---|---|
+| `PASSWORD_RESET_TOKEN_NOT_FOUND` | Token sai/không tồn tại |
+| `PASSWORD_RESET_TOKEN_EXPIRED` | Token quá 30 phút |
+| `PASSWORD_RESET_TOKEN_ALREADY_USED` | Token đã được dùng để reset trước đó |
+| `ACCOUNT_NOT_ACTIVE` | Account bị khoá (LOCKED) — admin đã ban |
+
+**Reset thành công tự động logout mọi thiết bị đang đăng nhập** (session revocation toàn bộ refresh-token family) — user phải login lại bằng mật khẩu mới trên mọi thiết bị, kể cả thiết bị vừa dùng để reset.
+
+Cả 2 endpoint đều `permitAll` (không cần Bearer token) nhưng có rate-limit bucket riêng (mặc định 3 request/phút theo IP/user) — hiển thị message rate-limit rõ ràng khi gặp `429`, không phải lỗi generic.
+
+```ts
+// forgot-password/page.tsx
+await api.post('/api/auth/forgot-password', { email });
+// luôn hiện toast thành công trung lập, không rẽ nhánh theo response
+
+// reset-password/page.tsx — trong <Suspense>
+const token = useSearchParams().get('token');
+await api.post('/api/auth/reset-password', { token, newPassword });
+router.push('/login');
+```
+
+Link "Quên mật khẩu?" đặt cạnh label password trên trang `/login`.
+
+---
+
 ## OAuth2 (Google / Facebook)
 
 Flow redirect — không dùng fetch/axios:
