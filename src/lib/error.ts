@@ -28,6 +28,7 @@ const ERROR_MESSAGE_VI: Record<string, string> = {
   'Shop not found': 'Không tìm thấy shop',
   'User already owns a shop': 'Bạn đã có shop',
   'Only the shop owner can perform this action': 'Chỉ chủ shop mới có thể thực hiện thao tác này',
+  'Admin accounts cannot be banned': 'Không thể khoá tài khoản admin',
 
   'Product not found': 'Không tìm thấy sản phẩm',
   'Product variant not found': 'Không tìm thấy phiên bản sản phẩm',
@@ -61,6 +62,8 @@ const ERROR_MESSAGE_VI: Record<string, string> = {
   'Voucher not found': 'Không tìm thấy voucher',
   'Voucher has expired': 'Voucher đã hết hạn',
   'Voucher usage limit has been reached': 'Voucher đã hết lượt sử dụng',
+  'Voucher is not active': 'Voucher chưa được kích hoạt',
+  "Order does not meet the voucher's minimum order amount": 'Đơn hàng chưa đạt giá trị tối thiểu để áp dụng voucher',
 
   'Cart is empty': 'Giỏ hàng trống',
   'No items selected for checkout': 'Chưa chọn sản phẩm để thanh toán',
@@ -90,6 +93,16 @@ const ERROR_MESSAGE_VI: Record<string, string> = {
 
   'Product is already in the wishlist': 'Sản phẩm đã có trong danh sách yêu thích',
 };
+
+/**
+ * Dịch một message lỗi backend (tiếng Anh) sang tiếng Việt trực tiếp — dùng cho các
+ * message lỗi nằm trong response 200 OK (không phải lỗi HTTP), ví dụ
+ * `CheckoutPreviewResponse.voucherError`. Message lạ trả về nguyên văn.
+ */
+export function translateErrorMessage(message: string | null | undefined): string | null | undefined {
+  if (message && ERROR_MESSAGE_VI[message]) return ERROR_MESSAGE_VI[message];
+  return message;
+}
 
 /** Dịch message lỗi backend (tiếng Anh) sang tiếng Việt; message lạ dùng fallback theo ngữ cảnh. */
 export function getApiErrorMessage(err: unknown, fallback: string): string {

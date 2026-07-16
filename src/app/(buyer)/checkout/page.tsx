@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { v4 as uuidv4 } from 'uuid';
 import { MapPin, Plus, Loader2, CreditCard, Banknote, AlertCircle, Check, Pencil, Trash2, Star } from 'lucide-react';
 import { api } from '@/lib/api';
-import { getApiErrorMessage } from '@/lib/error';
+import { getApiErrorMessage, translateErrorMessage } from '@/lib/error';
 import { Address, CheckoutPreview, CheckoutResponse, PaymentStatusResponse } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -308,7 +308,7 @@ export default function CheckoutPage() {
             )}
           </div>
           {preview?.voucherError && (
-            <p className="text-xs text-destructive mt-2">{preview.voucherError}</p>
+            <p className="text-xs text-destructive mt-2">{translateErrorMessage(preview.voucherError)}</p>
           )}
           {preview?.discountAmount != null && preview.discountAmount > 0 && (
             <p className="text-xs text-primary mt-2">Đã áp dụng mã &quot;{voucherCode}&quot; — giảm {formatPrice(preview.discountAmount)}</p>

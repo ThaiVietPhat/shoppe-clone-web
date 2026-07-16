@@ -58,7 +58,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
     queryKey: ['order-return', orderId],
     queryFn: async () => {
       const { data } = await api.get<{ data: ReturnRequestDetail | null }>(`/api/buyer/orders/${orderId}/return`);
-      return data.data;
+      // Backend omits the `data` key entirely (ApiResponse uses @JsonInclude NON_NULL) when there is
+      // no return request, so `data.data` is `undefined` here rather than `null` — coerce it, since
+      // react-query rejects `undefined` as a query result.
+      return data.data ?? null;
     },
     enabled: !!user && order?.status === 'DELIVERED',
   });

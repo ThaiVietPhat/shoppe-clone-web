@@ -17,6 +17,7 @@ import {
   Star,
   MonitorX,
   Heart,
+  Wallet,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -259,6 +260,10 @@ export function Header() {
                     <DropdownMenuItem onClick={() => router.push('/wishlist')}>
                       <Heart className="h-4 w-4" />
                       Sản phẩm yêu thích
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push('/wallet')}>
+                      <Wallet className="h-4 w-4" />
+                      Ví của tôi
                     </DropdownMenuItem>
                     {user.role === 'SELLER' && (
                       <>
