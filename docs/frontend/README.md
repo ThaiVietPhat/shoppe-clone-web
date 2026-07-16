@@ -37,13 +37,15 @@ OpenAPI groups:
 ```
 [Buyer]
   register/login (quên mật khẩu → forgot/reset-password) → browse homepage → search/AI recommend
-  → product detail (báo cáo vi phạm) → add cart → select items → checkout preview (áp mã voucher)
+  → product detail (báo cáo vi phạm, thêm yêu thích) → add cart → select items → checkout preview (áp mã voucher)
   → place order → VNPay / COD → order confirmed
   → review → notification → chat với seller
+  → (sau khi giao) yêu cầu trả hàng/hoàn tiền → xem ví (tiền hoàn) → xem wishlist
 
 [Seller]
   login → create product + media + variants + stock → publish
-  → nhận order → ship → deliver → seller dashboard
+  → nhận order → ship → deliver → seller dashboard → ví tự cộng doanh thu → rút tiền
+  → xử lý yêu cầu trả hàng (approve/reject)
 
 [Admin]
   login (role ADMIN) → dashboard → quản lý user (ban/unban)
@@ -67,6 +69,7 @@ OpenAPI groups:
 | [09-chat.md](09-chat.md) | REST history + STOMP realtime setup |
 | [10-environment.md](10-environment.md) | Env vars, CORS, cookies, seed/reset |
 | [11-voucher-admin-moderation.md](11-voucher-admin-moderation.md) | Voucher CRUD/apply, admin user ban/shop moderation, buyer report → admin resolve |
+| [12-wallet-return-wishlist.md](12-wallet-return-wishlist.md) | Seller wallet/withdraw, buyer return/dispute request + seller approve/reject, product wishlist |
 
 ---
 
