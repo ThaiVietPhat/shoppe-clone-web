@@ -44,31 +44,44 @@ function ChatContent() {
             <EmptyState icon={MessagesSquare} title="Chưa có cuộc trò chuyện" />
           ) : (
             <div className="divide-y divide-white/6">
-              {rooms.map((r) => (
-                <button key={r.id} onClick={() => router.push(`/chat?roomId=${r.id}`)}
-                  className={cn('flex w-full items-center gap-3 p-3 text-left transition-colors',
-                    activeRoomId === r.id ? 'bg-primary/10' : 'hover:bg-white/3')}>
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-                    <Store className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium line-clamp-1">{r.shopName}</p>
-                    {r.lastMessageContent && <p className="text-xs text-muted-foreground line-clamp-1">{r.lastMessageContent}</p>}
-                  </div>
-                  {r.unreadCount > 0 && (
-                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{r.unreadCount}</span>
-                  )}
-                </button>
-              ))}
+              {rooms.map((r) => {
+                // Viewer is the buyer of this specific room -> show who they're
+                // talking to (the shop). Otherwise the viewer is the shop owner
+                // -> show who they're talking to (the buyer), since every one of
+                // a seller's rooms otherwise shares the same shopName (their own
+                // shop) and would be indistinguishable in the list.
+                const isViewerBuyer = r.buyerId === user?.id;
+                const label = isViewerBuyer ? r.shopName : (r.buyerEmail ?? r.shopName);
+                return (
+                  <button key={r.id} onClick={() => router.push(`/chat?roomId=${r.id}`)}
+                    className={cn('flex w-full items-center gap-3 p-3 text-left transition-colors',
+                      activeRoomId === r.id ? 'bg-primary/10' : 'hover:bg-white/3')}>
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                      <Store className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium line-clamp-1">{label}</p>
+                      {r.lastMessageContent && <p className="text-xs text-muted-foreground line-clamp-1">{r.lastMessageContent}</p>}
+                    </div>
+                    {r.unreadCount > 0 && (
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{r.unreadCount}</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
 
         {/* Active room */}
         <div className="rounded-xl border border-white/8 bg-card overflow-hidden flex flex-col">
-          {activeRoomId ? (
-            <ChatRoomView key={activeRoomId} roomId={activeRoomId} shopName={rooms?.find((r) => r.id === activeRoomId)?.shopName} />
-          ) : (
+          {activeRoomId ? (() => {
+            const activeRoom = rooms?.find((r) => r.id === activeRoomId);
+            const counterpartLabel = activeRoom
+              ? (activeRoom.buyerId === user?.id ? activeRoom.shopName : (activeRoom.buyerEmail ?? activeRoom.shopName))
+              : undefined;
+            return <ChatRoomView key={activeRoomId} roomId={activeRoomId} counterpartLabel={counterpartLabel} />;
+          })() : (
             <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">Chọn một cuộc trò chuyện</div>
           )}
         </div>
@@ -77,7 +90,7 @@ function ChatContent() {
   );
 }
 
-function ChatRoomView({ roomId, shopName }: { roomId: string; shopName?: string }) {
+function ChatRoomView({ roomId, counterpartLabel }: { roomId: string; counterpartLabel?: string }) {
   const qc = useQueryClient();
   const { user } = useAuthStore();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -126,7 +139,7 @@ function ChatRoomView({ roomId, shopName }: { roomId: string; shopName?: string 
   return (
     <>
       <div className="px-4 py-3 border-b border-white/8 text-sm font-medium flex items-center gap-2">
-        <Store className="h-4 w-4 text-muted-foreground" /> {shopName ?? 'Cuộc trò chuyện'}
+        <Store className="h-4 w-4 text-muted-foreground" /> {counterpartLabel ?? 'Cuộc trò chuyện'}
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3">

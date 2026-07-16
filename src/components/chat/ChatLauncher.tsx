@@ -26,7 +26,7 @@ import { formatRelative, formatPrice, formatPriceRange, cn } from '@/lib/utils';
 type View =
   | { kind: 'list' }
   | { kind: 'ai' }
-  | { kind: 'shop'; roomId: string; shopName?: string };
+  | { kind: 'shop'; roomId: string; label?: string };
 
 export function ChatLauncher() {
   const { user, isHydrated } = useAuthStore();
@@ -72,15 +72,16 @@ export function ChatLauncher() {
             <ConversationList
               rooms={rooms}
               loading={roomsLoading}
+              viewerId={user.id}
               onSelectAi={() => setView({ kind: 'ai' })}
-              onSelectShop={(roomId, shopName) => setView({ kind: 'shop', roomId, shopName })}
+              onSelectShop={(roomId, label) => setView({ kind: 'shop', roomId, label })}
             />
           )}
           {view.kind === 'ai' && <AiConversation onBack={() => setView({ kind: 'list' })} />}
           {view.kind === 'shop' && (
             <ShopConversation
               roomId={view.roomId}
-              shopName={view.shopName}
+              label={view.label}
               onBack={() => setView({ kind: 'list' })}
             />
           )}
@@ -95,13 +96,15 @@ export function ChatLauncher() {
 function ConversationList({
   rooms,
   loading,
+  viewerId,
   onSelectAi,
   onSelectShop,
 }: {
   rooms: ChatRoom[] | undefined;
   loading: boolean;
+  viewerId: string;
   onSelectAi: () => void;
-  onSelectShop: (roomId: string, shopName?: string) => void;
+  onSelectShop: (roomId: string, label?: string) => void;
 }) {
   return (
     <>
@@ -136,28 +139,34 @@ function ConversationList({
           </div>
         ) : rooms && rooms.length > 0 ? (
           <div className="divide-y divide-white/6">
-            {rooms.map((r) => (
-              <button
-                key={r.id}
-                onClick={() => onSelectShop(r.id, r.shopName)}
-                className="flex w-full items-center gap-3 p-3 text-left transition-colors hover:bg-white/3"
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/8 text-muted-foreground">
-                  <Store className="h-5 w-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="line-clamp-1 text-sm font-medium text-foreground">{r.shopName}</p>
-                  {r.lastMessageContent && (
-                    <p className="line-clamp-1 text-xs text-muted-foreground">{r.lastMessageContent}</p>
+            {rooms.map((r) => {
+              // Same reasoning as the /chat page: a seller's rooms all share the
+              // same shopName (their own shop), so show the buyer's email instead
+              // when the viewer is the shop side of this room.
+              const label = r.buyerId === viewerId ? r.shopName : (r.buyerEmail ?? r.shopName);
+              return (
+                <button
+                  key={r.id}
+                  onClick={() => onSelectShop(r.id, label)}
+                  className="flex w-full items-center gap-3 p-3 text-left transition-colors hover:bg-white/3"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/8 text-muted-foreground">
+                    <Store className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="line-clamp-1 text-sm font-medium text-foreground">{label}</p>
+                    {r.lastMessageContent && (
+                      <p className="line-clamp-1 text-xs text-muted-foreground">{r.lastMessageContent}</p>
+                    )}
+                  </div>
+                  {r.unreadCount > 0 && (
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">
+                      {r.unreadCount}
+                    </span>
                   )}
-                </div>
-                {r.unreadCount > 0 && (
-                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">
-                    {r.unreadCount}
-                  </span>
-                )}
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         ) : (
           <p className="px-4 py-6 text-center text-xs text-muted-foreground">
@@ -356,11 +365,11 @@ function AiProductRow({ product }: { product: RecommendedProductResponse['produc
 
 function ShopConversation({
   roomId,
-  shopName,
+  label,
   onBack,
 }: {
   roomId: string;
-  shopName?: string;
+  label?: string;
   onBack: () => void;
 }) {
   const qc = useQueryClient();
@@ -422,7 +431,7 @@ function ShopConversation({
     <>
       <ConversationHeader
         icon={<Store className="h-4 w-4 text-muted-foreground" />}
-        title={shopName ?? 'Cuộc trò chuyện'}
+        title={label ?? 'Cuộc trò chuyện'}
         onBack={onBack}
       />
 

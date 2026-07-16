@@ -373,6 +373,7 @@ export interface Notification {
 export interface ChatRoom {
   id: string;
   buyerId: string;
+  buyerEmail: string | null;
   shopId: string;
   shopName: string;
   buyerLastReadAt: string | null;
