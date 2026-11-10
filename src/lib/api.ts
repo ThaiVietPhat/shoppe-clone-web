@@ -26,8 +26,13 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+interface QueuedRequest {
+  resolve: (token: string) => void;
+  reject: (err: unknown) => void;
+}
+
 let isRefreshing = false;
-let queue: Array<(token: string) => void> = [];
+let queue: QueuedRequest[] = [];
 
 api.interceptors.response.use(
   (res) => res,
@@ -41,10 +46,13 @@ api.interceptors.response.use(
       original._retry = true;
 
       if (isRefreshing) {
-        return new Promise((resolve) => {
-          queue.push((token) => {
-            original.headers.Authorization = `Bearer ${token}`;
-            resolve(api(original));
+        return new Promise((resolve, reject) => {
+          queue.push({
+            resolve: (token) => {
+              original.headers.Authorization = `Bearer ${token}`;
+              resolve(api(original));
+            },
+            reject: (e) => reject(e),
           });
         });
       }
@@ -54,16 +62,18 @@ api.interceptors.response.use(
         const { data } = await api.post('/api/auth/refresh');
         const newToken = data.data.accessToken;
         setAccessToken(newToken);
-        queue.forEach((cb) => cb(newToken));
+        queue.forEach((item) => item.resolve(newToken));
         queue = [];
         original.headers.Authorization = `Bearer ${newToken}`;
         return api(original);
-      } catch {
+      } catch (refreshErr) {
         setAccessToken(null);
+        queue.forEach((item) => item.reject(refreshErr));
         queue = [];
         if (typeof window !== 'undefined') {
           window.location.href = '/login';
         }
+        return Promise.reject(refreshErr);
       } finally {
         isRefreshing = false;
       }
