@@ -23,6 +23,7 @@ export default function CartPage() {
   const { data: cart, isLoading } = useCart();
   const { updateQuantity, removeItem, selectItems, selectAll, clearCart } = useCartMutations();
   const [clearOpen, setClearOpen] = useState(false);
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
 
   const items = useMemo(() => cart?.items ?? [], [cart]);
   const selectedItems = items.filter((i) => i.selected);
@@ -143,8 +144,15 @@ export default function CartPage() {
                       href={`/products/${item.productId}`}
                       className="relative h-16 w-16 shrink-0 rounded-lg overflow-hidden bg-white/5"
                     >
-                      {item.coverImageUrl ? (
-                        <Image src={item.coverImageUrl} alt={item.productName} fill sizes="64px" className="object-cover" />
+                      {item.coverImageUrl && !failedImages[item.variantId] ? (
+                        <Image
+                          src={item.coverImageUrl}
+                          alt={item.productName}
+                          fill
+                          sizes="64px"
+                          className="object-cover"
+                          onError={() => setFailedImages((prev) => ({ ...prev, [item.variantId]: true }))}
+                        />
                       ) : (
                         <div className="flex h-full items-center justify-center text-muted-foreground/30">
                           <ShoppingCart className="h-5 w-5" />

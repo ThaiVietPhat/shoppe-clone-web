@@ -17,7 +17,7 @@ export function AdminSidebar() {
   const pathname = usePathname();
   return (
     <aside className="lg:w-56 shrink-0">
-      <nav className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible">
+      <nav className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {NAV.map(({ href, label, icon: Icon }) => {
           const active = href === '/admin' ? pathname === href : pathname.startsWith(href);
           return (

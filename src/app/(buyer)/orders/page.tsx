@@ -22,6 +22,7 @@ function OrdersContent() {
   const params = useSearchParams();
   const status = params.get('status') ?? '';
   const [page, setPage] = useState(0);
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
   const { user } = useAuthStore();
   const { ready } = useRequireAuth();
 
@@ -85,8 +86,15 @@ function OrdersContent() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="relative h-14 w-14 shrink-0 rounded-lg overflow-hidden bg-white/5">
-                    {order.coverImageUrl ? (
-                      <Image src={order.coverImageUrl} alt="" fill sizes="56px" className="object-cover" />
+                    {order.coverImageUrl && !failedImages[order.orderId] ? (
+                      <Image
+                        src={order.coverImageUrl}
+                        alt=""
+                        fill
+                        sizes="56px"
+                        className="object-cover"
+                        onError={() => setFailedImages((prev) => ({ ...prev, [order.orderId]: true }))}
+                      />
                     ) : (
                       <div className="flex h-full items-center justify-center text-muted-foreground/30"><Package className="h-5 w-5" /></div>
                     )}

@@ -27,6 +27,7 @@ const MOVEMENT_TYPE_LABEL: Record<InventoryMovement['movementType'], string> = {
   RESERVE: 'Giữ hàng (đặt hàng)',
   CONFIRM: 'Xác nhận bán',
   RELEASE: 'Trả lại tồn kho',
+  RESTOCK: 'Nhập lại kho (trả hàng)',
 };
 
 export default function EditProductPage({ params }: { params: Promise<{ productId: string }> }) {
@@ -74,8 +75,9 @@ export default function EditProductPage({ params }: { params: Promise<{ productI
   const updateStock = useMutation({
     mutationFn: ({ variantId, availableStock }: { variantId: string; availableStock: number }) =>
       api.patch(`/api/inventories/variants/${variantId}/stock`, { availableStock }),
-    onSuccess: () => {
+    onSuccess: (_d, vars) => {
       toast.success('Đã cập nhật tồn kho');
+      setStocks((prev) => ({ ...prev, [vars.variantId]: '' }));
       invalidateProduct();
     },
     onError: () => toast.error('Không thể cập nhật tồn kho'),
@@ -112,7 +114,7 @@ export default function EditProductPage({ params }: { params: Promise<{ productI
   const isActive = product.status === 'ACTIVE';
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-3xl pb-16">
       <Link href="/seller/products" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors">
         <ChevronLeft className="h-4 w-4" /> Danh sách sản phẩm
       </Link>
@@ -307,7 +309,7 @@ function InventoryHistoryDialog({ variantId, onOpenChange }: { variantId: string
             movements.map((m) => (
               <div key={m.id} className="flex items-center justify-between text-xs border-b border-white/6 pb-2">
                 <div>
-                  <p className="text-foreground">{MOVEMENT_TYPE_LABEL[m.movementType]}</p>
+                  <p className="text-foreground">{MOVEMENT_TYPE_LABEL[m.movementType] ?? m.movementType}</p>
                   <p className="text-muted-foreground mt-0.5">{formatDateTime(m.createdAt)}</p>
                 </div>
                 <div className="text-right text-muted-foreground">

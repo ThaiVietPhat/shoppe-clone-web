@@ -431,7 +431,7 @@ export interface Inventory {
 export interface InventoryMovement {
   id: string;
   variantId: string;
-  movementType: 'INITIAL' | 'STOCK_UPDATE' | 'RESERVE' | 'CONFIRM' | 'RELEASE';
+  movementType: 'INITIAL' | 'STOCK_UPDATE' | 'RESERVE' | 'CONFIRM' | 'RELEASE' | 'RESTOCK';
   quantity: number;
   availableStockAfter: number;
   reservedStockAfter: number;

@@ -38,6 +38,7 @@ export default function ProductDetailPage({
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
   const [reportOpen, setReportOpen] = useState(false);
+  const [failedMedia, setFailedMedia] = useState<Record<string, boolean>>({});
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', productId],
@@ -192,7 +193,7 @@ export default function ProductDetailPage({
         {/* Images */}
         <div className="space-y-3">
           <div className="relative aspect-square rounded-2xl overflow-hidden bg-white/3 border border-white/8 group">
-            {product.media.length > 0 ? (
+            {product.media.length > 0 && !failedMedia[(product.media[activeImage] ?? product.media[0]).mediaId] ? (
               <Image
                 src={product.media[activeImage]?.publicUrl ?? product.media[0].publicUrl}
                 alt={product.name}
@@ -200,6 +201,10 @@ export default function ProductDetailPage({
                 sizes="(max-width: 1024px) 100vw, 50vw"
                 className="object-cover"
                 priority
+                onError={() => {
+                  const id = (product.media[activeImage] ?? product.media[0]).mediaId;
+                  setFailedMedia((prev) => ({ ...prev, [id]: true }));
+                }}
               />
             ) : (
               <div className="flex h-full items-center justify-center text-muted-foreground/20">
@@ -221,13 +226,26 @@ export default function ProductDetailPage({
                   key={m.mediaId}
                   onClick={() => setActiveImage(i)}
                   className={cn(
-                    'relative h-16 w-16 shrink-0 rounded-lg overflow-hidden border-2 transition-all',
+                    'relative h-16 w-16 shrink-0 rounded-lg overflow-hidden border-2 transition-all bg-white/5',
                     i === activeImage
                       ? 'border-primary shadow-primary/30 shadow-md'
                       : 'border-white/10 hover:border-white/30'
                   )}
                 >
-                  <Image src={m.publicUrl} alt="" fill sizes="64px" className="object-cover" />
+                  {!failedMedia[m.mediaId] ? (
+                    <Image
+                      src={m.publicUrl}
+                      alt=""
+                      fill
+                      sizes="64px"
+                      className="object-cover"
+                      onError={() => setFailedMedia((prev) => ({ ...prev, [m.mediaId]: true }))}
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-muted-foreground/30">
+                      <ShoppingCart className="h-5 w-5" />
+                    </div>
+                  )}
                 </button>
               ))}
             </div>

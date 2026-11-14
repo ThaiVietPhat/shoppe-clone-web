@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,8 +15,11 @@ function CallbackContent() {
   const searchParams = useSearchParams();
   const { login } = useAuthStore();
   const [error, setError] = useState('');
+  const called = useRef(false);
 
   useEffect(() => {
+    if (called.current) return;
+    called.current = true;
     const token = searchParams.get('token');
     if (!token) {
       setError('Đăng nhập OAuth2 thất bại. Vui lòng thử lại.');

@@ -286,24 +286,31 @@ export default function CheckoutPage() {
             <input
               value={voucherInput}
               onChange={(e) => setVoucherInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  if (voucherInput.trim()) setVoucherCode(voucherInput.trim().toUpperCase());
+                }
+              }}
               placeholder="Nhập mã giảm giá"
               className="flex-1 h-9 rounded-md border border-white/10 bg-white/5 px-3 text-sm uppercase placeholder:normal-case focus-visible:ring-1 focus-visible:ring-primary/50 outline-none"
             />
-            {voucherCode ? (
+            {(!voucherCode || voucherInput.trim().toUpperCase() !== voucherCode.toUpperCase()) && (
+              <Button
+                className="bg-primary"
+                disabled={!voucherInput.trim()}
+                onClick={() => setVoucherCode(voucherInput.trim().toUpperCase())}
+              >
+                Áp dụng
+              </Button>
+            )}
+            {voucherCode && (
               <Button
                 variant="outline"
                 className="border-white/10"
                 onClick={() => { setVoucherCode(''); setVoucherInput(''); }}
               >
                 Huỷ
-              </Button>
-            ) : (
-              <Button
-                className="bg-primary"
-                disabled={!voucherInput.trim()}
-                onClick={() => setVoucherCode(voucherInput.trim())}
-              >
-                Áp dụng
               </Button>
             )}
           </div>

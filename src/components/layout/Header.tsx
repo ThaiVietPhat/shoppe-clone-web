@@ -2,13 +2,12 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useMemo, useState, useEffect } from 'react';
 import {
   Search,
   ShoppingCart,
   Bell,
-  User,
   ChevronDown,
   Store,
   Package,
@@ -18,6 +17,7 @@ import {
   MonitorX,
   Heart,
   Wallet,
+  Shield,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,10 +40,20 @@ const CART_PREVIEW_LIMIT = 5;
 
 export function Header() {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, logout } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
   const [cartPreviewOpen, setCartPreviewOpen] = useState(false);
+  const [failedThumbs, setFailedThumbs] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (pathname === '/search') {
+      const q = new URLSearchParams(window.location.search).get('q') ?? '';
+      setSearchQuery(q);
+    }
+  }, [pathname]);
 
   const { data: cart } = useCart();
   const cartItems = useMemo(() => cart?.items ?? [], [cart]);
@@ -189,13 +199,14 @@ export function Header() {
                                   className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors"
                                 >
                                   <div className="relative h-10 w-10 shrink-0 rounded-md overflow-hidden bg-white/5">
-                                    {item.coverImageUrl ? (
+                                    {item.coverImageUrl && !failedThumbs[item.variantId] ? (
                                       <Image
                                         src={item.coverImageUrl}
                                         alt={item.productName}
                                         fill
                                         sizes="40px"
                                         className="object-cover"
+                                        onError={() => setFailedThumbs((prev) => ({ ...prev, [item.variantId]: true }))}
                                       />
                                     ) : (
                                       <div className="flex h-full items-center justify-center text-muted-foreground/30">
@@ -265,6 +276,15 @@ export function Header() {
                       <Wallet className="h-4 w-4" />
                       Ví của tôi
                     </DropdownMenuItem>
+                    {user.role === 'ADMIN' && (
+                      <>
+                        <DropdownMenuSeparator className="bg-white/8" />
+                        <DropdownMenuItem onClick={() => router.push('/admin')}>
+                          <Shield className="h-4 w-4" />
+                          Quản trị hệ thống
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     {user.role === 'SELLER' && (
                       <>
                         <DropdownMenuSeparator className="bg-white/8" />

@@ -68,7 +68,7 @@ export default function SellerOrderDetailPage({ params }: { params: Promise<{ or
         </div>
         <div className="flex items-center gap-2">
           <Badge className={cn('text-xs border', ORDER_STATUS_CLASS[order.status])}>{ORDER_STATUS_LABEL[order.status]}</Badge>
-          {order.fulfillmentStatus && (
+          {order.fulfillmentStatus && FULFILLMENT_STATUS_LABEL[order.fulfillmentStatus] !== ORDER_STATUS_LABEL[order.status] && (
             <Badge className="text-xs border bg-white/10 text-muted-foreground border-white/15">
               {FULFILLMENT_STATUS_LABEL[order.fulfillmentStatus]}
             </Badge>

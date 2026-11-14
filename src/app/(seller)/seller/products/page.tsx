@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Package, Plus, Pencil, Eye, EyeOff } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -36,10 +36,12 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default function SellerProductsPage() {
+  const router = useRouter();
   const qc = useQueryClient();
   const { user } = useAuthStore();
   const [status, setStatus] = useState('ALL');
   const [page, setPage] = useState(0);
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
 
   const { data, isLoading } = useQuery({
     queryKey: ['seller-products', status, page],
@@ -69,9 +71,9 @@ export default function SellerProductsPage() {
     <div>
       <div className="flex items-center justify-between mb-5">
         <h1 className="text-lg font-semibold text-foreground">Sản phẩm</h1>
-        <Link href="/seller/products/new">
-          <Button className="bg-primary gap-1.5"><Plus className="h-4 w-4" /> Thêm sản phẩm</Button>
-        </Link>
+        <Button className="bg-primary gap-1.5" onClick={() => router.push('/seller/products/new')}>
+          <Plus className="h-4 w-4" /> Thêm sản phẩm
+        </Button>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
@@ -88,7 +90,7 @@ export default function SellerProductsPage() {
         <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-xl bg-white/5" />)}</div>
       ) : !data || data.content.length === 0 ? (
         <EmptyState icon={Package} title="Chưa có sản phẩm"
-          action={<Link href="/seller/products/new"><Button className="bg-primary gap-1.5"><Plus className="h-4 w-4" /> Thêm sản phẩm</Button></Link>} />
+          action={<Button className="bg-primary gap-1.5" onClick={() => router.push('/seller/products/new')}><Plus className="h-4 w-4" /> Thêm sản phẩm</Button>} />
       ) : (
         <>
           <div className="space-y-3">
@@ -97,7 +99,16 @@ export default function SellerProductsPage() {
               return (
               <div key={p.id} className="flex items-center gap-4 rounded-xl border border-white/8 bg-card p-4">
                 <div className="relative h-16 w-16 shrink-0 rounded-lg overflow-hidden bg-white/5">
-                  {cover ? <Image src={cover.publicUrl} alt="" fill sizes="64px" className="object-cover" /> : (
+                  {cover && !failedImages[p.id] ? (
+                    <Image
+                      src={cover.publicUrl}
+                      alt={p.name}
+                      fill
+                      sizes="64px"
+                      className="object-cover"
+                      onError={() => setFailedImages((prev) => ({ ...prev, [p.id]: true }))}
+                    />
+                  ) : (
                     <div className="flex h-full items-center justify-center text-muted-foreground/30"><Package className="h-6 w-6" /></div>
                   )}
                 </div>
@@ -112,9 +123,10 @@ export default function SellerProductsPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <Link href={`/seller/products/${p.id}/edit`}>
-                    <Button size="sm" variant="outline" className="border-white/10 gap-1 text-xs"><Pencil className="h-3.5 w-3.5" /> Sửa</Button>
-                  </Link>
+                  <Button size="sm" variant="outline" className="border-white/10 gap-1 text-xs"
+                    onClick={() => router.push(`/seller/products/${p.id}/edit`)}>
+                    <Pencil className="h-3.5 w-3.5" /> Sửa
+                  </Button>
                   {p.status === 'ACTIVE' ? (
                     <Button size="sm" variant="outline" className="border-white/10 gap-1 text-xs"
                       disabled={togglePublish.isPending}

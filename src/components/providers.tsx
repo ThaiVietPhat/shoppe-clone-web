@@ -55,7 +55,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <CsrfInit />
       {children}
       {/* bottom-right so stacked toasts never sit over the header's account/login controls */}
-      <Toaster theme="dark" position="bottom-right" richColors />
+      <Toaster theme="dark" position="bottom-right" richColors closeButton />
     </QueryClientProvider>
   );
 }

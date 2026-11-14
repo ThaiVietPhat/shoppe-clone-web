@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,8 +13,11 @@ function VerifyContent() {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
+  const called = useRef(false);
 
   useEffect(() => {
+    if (called.current) return;
+    called.current = true;
     const token = searchParams.get('token');
     if (!token) {
       setStatus('error');
@@ -22,7 +25,9 @@ function VerifyContent() {
       return;
     }
 
-    api.post('/api/auth/verify', { token })
+    api.get('/api/auth/csrf')
+      .catch(() => {})
+      .then(() => api.post('/api/auth/verify', { token }))
       .then(() => setStatus('success'))
       .catch((err) => {
         setStatus('error');
