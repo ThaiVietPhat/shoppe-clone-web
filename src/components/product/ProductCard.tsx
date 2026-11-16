@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Star, ShoppingCart, Heart } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn, formatPrice, formatPriceRange } from '@/lib/utils';
 import { ProductCardResponse } from '@/types/api';

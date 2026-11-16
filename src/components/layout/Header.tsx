@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useMemo, useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   Search,
   ShoppingCart,
@@ -41,9 +42,8 @@ const CART_PREVIEW_LIMIT = 5;
 export function Header() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, logout } = useAuthStore();
+  const { user, isHydrated, logout } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [unreadCount, setUnreadCount] = useState(0);
   const [cartPreviewOpen, setCartPreviewOpen] = useState(false);
   const [failedThumbs, setFailedThumbs] = useState<Record<string, boolean>>({});
 
@@ -63,17 +63,17 @@ export function Header() {
     [cartItems],
   );
 
-  useEffect(() => {
-    if (!user) return;
-    const fetch = () => {
-      api.get('/api/notifications/unread-count')
-        .then(({ data }) => setUnreadCount(data.data.count))
-        .catch(() => {});
-    };
-    fetch();
-    const interval = setInterval(fetch, 60_000);
-    return () => clearInterval(interval);
-  }, [user]);
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ['unread-count'],
+    queryFn: async () => {
+      const { data } = await api.get<{ data: { unread?: number; count?: number } }>(
+        '/api/notifications/unread-count',
+      );
+      return data.data.unread ?? data.data.count ?? 0;
+    },
+    enabled: isHydrated && !!user,
+    refetchInterval: 60_000,
+  });
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -142,7 +142,9 @@ export function Header() {
 
           {/* Right actions */}
           <div className="ml-auto flex items-center gap-1">
-            {user ? (
+            {!isHydrated ? (
+              <div className="h-8 w-24 rounded-lg bg-white/5 animate-pulse" />
+            ) : user ? (
               <>
                 {/* Notifications */}
                 <Button

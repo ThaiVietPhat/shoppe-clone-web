@@ -79,8 +79,12 @@ export default function NewProductPage() {
     if (variants.some((v) => !v.sku.trim() || !v.name.trim() || !v.price)) {
       return toast.error('Nhập đầy đủ tên, SKU và giá cho mỗi phiên bản');
     }
+    if (variants.some((v) => Number(v.price) <= 0)) {
+      return toast.error('Giá mỗi phiên bản phải lớn hơn 0');
+    }
 
     setSubmitting(true);
+    let createdProductId: string | null = null;
     try {
       const mediaIds = [cover, ...gallery].filter((g): g is Media => !!g).map((g) => g.mediaId);
 
@@ -90,6 +94,7 @@ export default function NewProductPage() {
         mediaIds,
       });
       const productId = created.data.id;
+      createdProductId = productId;
 
       for (const v of variants) {
         const optionLabels = Object.fromEntries(
@@ -116,6 +121,9 @@ export default function NewProductPage() {
       router.push('/seller/products');
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err, 'Không thể tạo sản phẩm'));
+      if (createdProductId) {
+        router.push(`/seller/products/${createdProductId}/edit`);
+      }
     } finally {
       setSubmitting(false);
     }

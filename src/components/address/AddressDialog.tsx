@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -46,6 +47,27 @@ export function AddressDialog({
       isDefault: initial.isDefault,
     } : undefined,
   });
+
+  useEffect(() => {
+    if (!open) return;
+    reset(initial ? {
+      recipientName: initial.recipientName,
+      phone: initial.phone,
+      addressLine: initial.addressLine,
+      wardName: initial.wardName,
+      districtName: initial.districtName,
+      provinceName: initial.provinceName,
+      isDefault: initial.isDefault,
+    } : {
+      recipientName: '',
+      phone: '',
+      addressLine: '',
+      wardName: '',
+      districtName: '',
+      provinceName: '',
+      isDefault: false,
+    });
+  }, [open, initial, reset]);
 
   async function onSubmit(values: AddressForm) {
     try {

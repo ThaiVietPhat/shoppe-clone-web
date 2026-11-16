@@ -3,9 +3,10 @@
 import { use, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
-import { Store, Star, Package, MessageCircle, Flag } from 'lucide-react';
+import { Store, Star, Package, MessageCircle, Flag, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { getApiErrorMessage } from '@/lib/error';
 import { ProductCardResponse, ShopDetail } from '@/types/api';
 import { pageFrom, PagedResponse } from '@/lib/page';
 import { ProductCard } from '@/components/product/ProductCard';
@@ -25,6 +26,8 @@ export default function ShopPage({ params }: { params: Promise<{ shopId: string 
   const qc = useQueryClient();
   const [page, setPage] = useState(0);
   const [reportOpen, setReportOpen] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [logoFailed, setLogoFailed] = useState(false);
 
   const { data: shop, isLoading: shopLoading } = useQuery({
     queryKey: ['shop', shopId],
@@ -46,12 +49,15 @@ export default function ShopPage({ params }: { params: Promise<{ shopId: string 
 
   async function handleChat() {
     if (!user) { router.push('/login'); return; }
+    setChatLoading(true);
     try {
       const { data } = await api.post('/api/chat/rooms', { shopId });
       qc.invalidateQueries({ queryKey: ['chat-rooms'] });
       router.push(`/chat?roomId=${data.data.id}`);
-    } catch {
-      toast.error('Không thể mở chat');
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, 'Không thể mở chat'));
+    } finally {
+      setChatLoading(false);
     }
   }
 
@@ -64,8 +70,15 @@ export default function ShopPage({ params }: { params: Promise<{ shopId: string 
         <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-card mb-6">
           <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-4 p-6">
             <div className="h-20 w-20 rounded-2xl bg-primary/20 flex items-center justify-center overflow-hidden shrink-0">
-              {shop.logo ? (
-                <Image src={shop.logo.publicUrl} alt={shop.name} width={80} height={80} className="object-cover" />
+              {shop.logo && !logoFailed ? (
+                <Image
+                  src={shop.logo.publicUrl}
+                  alt={shop.name}
+                  width={80}
+                  height={80}
+                  className="object-cover"
+                  onError={() => setLogoFailed(true)}
+                />
               ) : (
                 <Store className="h-9 w-9 text-primary" />
               )}
@@ -85,18 +98,21 @@ export default function ShopPage({ params }: { params: Promise<{ shopId: string 
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <Button variant="outline" className="border-white/10 gap-2" onClick={handleChat}>
-                <MessageCircle className="h-4 w-4" /> Chat với shop
-              </Button>
-              <button
-                onClick={() => setReportOpen(true)}
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors px-2"
-                title="Báo cáo shop"
-              >
-                <Flag className="h-3.5 w-3.5" /> Báo cáo
-              </button>
-            </div>
+            {user?.id !== shop.ownerId && (
+              <div className="flex items-center gap-2 shrink-0">
+                <Button variant="outline" className="border-white/10 gap-2" disabled={chatLoading} onClick={handleChat}>
+                  {chatLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
+                  Chat với shop
+                </Button>
+                <button
+                  onClick={() => setReportOpen(true)}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors px-2"
+                  title="Báo cáo shop"
+                >
+                  <Flag className="h-3.5 w-3.5" /> Báo cáo
+                </button>
+              </div>
+            )}
           </div>
         </div>
       ) : (

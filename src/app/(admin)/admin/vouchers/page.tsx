@@ -196,10 +196,10 @@ export default function AdminVouchersPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="discountType">Loại giảm giá</Label>
-                <select id="discountType" className="w-full h-9 rounded-md border border-white/10 bg-white/5 px-3 text-sm"
+                <select id="discountType" className="w-full h-9 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-foreground"
                   {...register('discountType')}>
-                  <option value="PERCENTAGE">Phần trăm (%)</option>
-                  <option value="FIXED_AMOUNT">Số tiền cố định</option>
+                  <option value="PERCENTAGE" className="bg-card text-foreground">Phần trăm (%)</option>
+                  <option value="FIXED_AMOUNT" className="bg-card text-foreground">Số tiền cố định</option>
                 </select>
               </div>
               <div className="space-y-1.5">

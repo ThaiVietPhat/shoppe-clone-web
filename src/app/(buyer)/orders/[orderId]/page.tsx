@@ -67,12 +67,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
   });
 
   const cancel = useMutation({
-    mutationFn: () => api.post(`/api/buyer/orders/${orderId}/cancel`, { reason: cancelReason }),
+    mutationFn: () => api.post(`/api/buyer/orders/${orderId}/cancel`, { reason: cancelReason.trim() }),
     onSuccess: () => {
       toast.success('Đã huỷ đơn hàng');
       qc.invalidateQueries({ queryKey: ['order', orderId] });
       qc.invalidateQueries({ queryKey: ['buyer-orders'] });
       setCancelOpen(false);
+      setCancelReason('');
     },
     onError: (err: unknown) => {
       toast.error(getApiErrorMessage(err, 'Không thể huỷ đơn'));
@@ -219,7 +220,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
           <DialogFooter>
             <Button variant="outline" className="border-white/10" onClick={() => setCancelOpen(false)}>Đóng</Button>
             <Button variant="outline" className="border-destructive/30 text-destructive hover:bg-destructive/10"
-              disabled={cancel.isPending} onClick={() => cancel.mutate()}>
+              disabled={cancel.isPending || !cancelReason.trim()} onClick={() => cancel.mutate()}>
               {cancel.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Xác nhận huỷ'}
             </Button>
           </DialogFooter>

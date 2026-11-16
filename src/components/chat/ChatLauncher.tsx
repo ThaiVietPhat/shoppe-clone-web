@@ -224,10 +224,12 @@ function AiConversation({ onBack }: { onBack: () => void }) {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+    }
   }, [messages, loading]);
 
   async function handleSend() {
@@ -278,7 +280,7 @@ function AiConversation({ onBack }: { onBack: () => void }) {
         onBack={onBack}
       />
 
-      <div className="flex-1 space-y-3 overflow-y-auto p-3">
+      <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto p-3">
         {messages.map((m) => (
           <div key={m.id} className={cn('flex flex-col', m.role === 'user' ? 'items-end' : 'items-start')}>
             <div
@@ -313,7 +315,6 @@ function AiConversation({ onBack }: { onBack: () => void }) {
             Đang tìm sản phẩm phù hợp…
           </div>
         )}
-        <div ref={bottomRef} />
       </div>
 
       <div className="flex gap-2 border-t border-white/8 p-3">
@@ -377,7 +378,7 @@ function ShopConversation({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const { data: history, isLoading } = useQuery({
     queryKey: ['chat-messages', roomId],
@@ -405,7 +406,9 @@ function ShopConversation({
   });
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+    }
   }, [messages]);
 
   async function handleSend() {
@@ -435,7 +438,7 @@ function ShopConversation({
         onBack={onBack}
       />
 
-      <div className="flex-1 space-y-3 overflow-y-auto p-3">
+      <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto p-3">
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -469,7 +472,6 @@ function ShopConversation({
             );
           })
         )}
-        <div ref={bottomRef} />
       </div>
 
       <div className="flex gap-2 border-t border-white/8 p-3">

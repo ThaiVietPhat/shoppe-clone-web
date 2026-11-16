@@ -67,8 +67,8 @@ export function ReturnRequestDialog({ open, onOpenChange, orderId }: ReturnReque
             <Label htmlFor="reasonCategory">Lý do</Label>
             <select id="reasonCategory" value={reasonCategory}
               onChange={(e) => setReasonCategory(e.target.value as ReturnReasonCategory)}
-              className="w-full h-9 rounded-md border border-white/10 bg-white/5 px-3 text-sm">
-              {REASON_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              className="w-full h-9 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-foreground">
+              {REASON_OPTIONS.map((o) => <option key={o.value} value={o.value} className="bg-card text-foreground">{o.label}</option>)}
             </select>
           </div>
 

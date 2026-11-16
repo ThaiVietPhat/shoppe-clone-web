@@ -96,7 +96,7 @@ function ChatRoomView({ roomId, counterpartLabel }: { roomId: string; counterpar
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const { data: history, isLoading } = useQuery({
     queryKey: ['chat-messages', roomId],
@@ -119,7 +119,11 @@ function ChatRoomView({ roomId, counterpartLabel }: { roomId: string; counterpar
     setMessages((prev) => prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]);
   });
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  useEffect(() => {
+    if (listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   async function handleSend() {
     const content = input.trim();
@@ -142,7 +146,7 @@ function ChatRoomView({ roomId, counterpartLabel }: { roomId: string; counterpar
         <Store className="h-4 w-4 text-muted-foreground" /> {counterpartLabel ?? 'Cuộc trò chuyện'}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div ref={listRef} className="flex-1 overflow-y-auto p-4 space-y-3">
         {isLoading ? (
           <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-2/3 bg-white/5" />)}</div>
         ) : messages.length === 0 ? (
@@ -161,7 +165,6 @@ function ChatRoomView({ roomId, counterpartLabel }: { roomId: string; counterpar
             );
           })
         )}
-        <div ref={bottomRef} />
       </div>
 
       <div className="border-t border-white/8 p-3 flex gap-2">

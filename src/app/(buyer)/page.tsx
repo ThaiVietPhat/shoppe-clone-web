@@ -8,7 +8,6 @@ import { ProductCardResponse, CategoryNode, RecommendationResponse } from '@/typ
 import { pageFrom, PagedResponse } from '@/lib/page';
 import Link from 'next/link';
 import { ChevronRight, Zap, TrendingUp, Sparkles } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 export default function HomePage() {
   const { data: productsData, isLoading: productsLoading } = useQuery({

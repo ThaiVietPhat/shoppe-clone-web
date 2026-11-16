@@ -56,10 +56,10 @@ export function ReportDialog({ open, onOpenChange, targetType, targetId }: Repor
             id="reasonCategory"
             value={reasonCategory}
             onChange={(e) => setReasonCategory(e.target.value as typeof reasonCategory)}
-            className="w-full h-9 rounded-md border border-white/10 bg-white/5 px-3 text-sm"
+            className="w-full h-9 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-foreground"
           >
             {REASONS.map((r) => (
-              <option key={r.value} value={r.value}>{r.label}</option>
+              <option key={r.value} value={r.value} className="bg-card text-foreground">{r.label}</option>
             ))}
           </select>
         </div>
