@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { v4 as uuidv4 } from 'uuid';
@@ -25,7 +25,7 @@ export default function CheckoutPage() {
   const qc = useQueryClient();
   const { user } = useAuthStore();
   const { ready } = useRequireAuth();
-  const [idempotencyKey] = useState(() => uuidv4());
+  const [idempotencyKey, setIdempotencyKey] = useState(() => uuidv4());
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'VNPAY' | 'COD'>('COD');
   const [voucherInput, setVoucherInput] = useState('');
@@ -38,20 +38,37 @@ export default function CheckoutPage() {
     queryKey: ['addresses'],
     queryFn: async () => {
       const { data } = await api.get<{ data: Address[] }>('/api/addresses');
-      const list = data.data;
-      const def = list.find((a) => a.isDefault) ?? list[0];
-      if (def && !selectedAddressId) setSelectedAddressId(def.id);
-      return list;
+      return data.data;
     },
     enabled: !!user,
   });
+
+  useEffect(() => {
+    if (!addresses) return;
+    if (addresses.length === 0) {
+      if (selectedAddressId) setSelectedAddressId('');
+      return;
+    }
+    const stillExists = addresses.some((a) => a.id === selectedAddressId);
+    if (!selectedAddressId || !stillExists) {
+      const def = addresses.find((a) => a.isDefault) ?? addresses[0];
+      setSelectedAddressId(def?.id ?? '');
+    }
+  }, [addresses, selectedAddressId]);
+
+  useEffect(() => {
+    setIdempotencyKey(uuidv4());
+  }, [selectedAddressId, voucherCode]);
 
   const invalidateAddresses = () => qc.invalidateQueries({ queryKey: ['addresses'] });
 
   const deleteAddress = useMutation({
     mutationFn: (addressId: string) => api.delete(`/api/addresses/${addressId}`),
-    onSuccess: () => {
+    onSuccess: (_res, deletedId) => {
       toast.success('Đã xoá địa chỉ');
+      if (deletedId === selectedAddressId) {
+        setSelectedAddressId('');
+      }
       invalidateAddresses();
       setDeletingAddressId(null);
     },
@@ -102,6 +119,17 @@ export default function CheckoutPage() {
       }
     },
     onError: (err: unknown) => {
+      const axiosErr = err as { response?: { status?: number; data?: { message?: string } } };
+      const status = axiosErr?.response?.status;
+      const msg = axiosErr?.response?.data?.message;
+      if (
+        status &&
+        status >= 400 &&
+        status < 500 &&
+        !(status === 409 && msg === 'An identical request is currently processing')
+      ) {
+        setIdempotencyKey(uuidv4());
+      }
       toast.error(getApiErrorMessage(err, 'Đặt hàng thất bại, vui lòng thử lại'));
     },
   });

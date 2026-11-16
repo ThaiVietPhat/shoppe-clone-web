@@ -42,7 +42,9 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (isHydrated && user) {
-      router.replace(user.role === 'SELLER' ? '/seller/dashboard' : '/');
+      if (user.role === 'SELLER') router.replace('/seller/dashboard');
+      else if (user.role === 'ADMIN') router.replace('/admin');
+      else router.replace('/');
     }
   }, [isHydrated, user, router]);
 
@@ -88,6 +90,14 @@ export default function RegisterPage() {
   function handleOAuth(provider: 'google') {
     const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080';
     window.location.href = `${base}/oauth2/authorization/${provider}`;
+  }
+
+  if (isHydrated && user) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
   }
 
   if (success) {

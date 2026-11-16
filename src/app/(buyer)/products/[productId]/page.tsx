@@ -119,30 +119,33 @@ export default function ProductDetailPage({
   const maxQty = selectedVariant?.availableStock ?? 99;
   const { addItem } = useCartMutations();
 
-  async function handleAddToCart() {
+  async function handleAddToCart(): Promise<boolean> {
     if (!user) {
       toast.error('Vui lòng đăng nhập để thêm vào giỏ hàng');
       router.push('/login');
-      return;
+      return false;
     }
     if ((product?.variants.length ?? 0) > 1 && !selectedVariant) {
       toast.error('Vui lòng chọn phiên bản sản phẩm');
-      return;
+      return false;
     }
     const variantId = selectedVariant?.id ?? product?.variants[0]?.id;
-    if (!variantId) return;
+    if (!variantId) return false;
 
     try {
       await addItem.mutateAsync({ variantId, quantity });
       toast.success('Đã thêm vào giỏ hàng');
+      return true;
     } catch {
       toast.error('Không thể thêm vào giỏ hàng');
+      return false;
     }
   }
 
   async function handleBuyNow() {
-    await handleAddToCart();
-    router.push('/cart');
+    if (await handleAddToCart()) {
+      router.push('/cart');
+    }
   }
 
   async function handleChat() {

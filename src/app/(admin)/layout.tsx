@@ -1,28 +1,33 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { AdminSidebar } from '@/components/layout/AdminSidebar';
 import { useAuthStore } from '@/stores/auth.store';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, isHydrated } = useAuthStore();
 
   useEffect(() => {
     if (!isHydrated) return;
     if (!user) {
-      router.replace('/login?redirect=/admin');
+      router.replace(`/login?redirect=${encodeURIComponent(pathname || '/admin')}`);
     } else if (user.role !== 'ADMIN') {
       router.replace('/');
     }
-  }, [isHydrated, user, router]);
+  }, [isHydrated, user, router, pathname]);
 
   if (!isHydrated || !user || user.role !== 'ADMIN') {
     return (
       <div className="min-h-screen flex flex-col">
         <Header />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
       </div>
     );
   }
